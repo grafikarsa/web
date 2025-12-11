@@ -48,11 +48,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
   });
 
   if (userLoading) {
-    return (
-      <div className="container mx-auto max-w-4xl px-4 py-8">
-        <ProfileSkeleton />
-      </div>
-    );
+    return <ProfileSkeleton />;
   }
 
   if (userError || !userData?.data) {
@@ -63,21 +59,20 @@ export default function ProfilePage({ params }: ProfilePageProps) {
   const portfolios = portfoliosData?.data || [];
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-8">
+    <div>
       <UserProfile profile={profile} />
 
       {/* Portfolios Section */}
-      <div className="mt-12" id="portfolios">
-        <h2 className="mb-6 text-xl font-semibold">
-          Portofolio {isOwner && `(${portfolios.length})`}
-        </h2>
+      <div className="container mx-auto max-w-5xl px-6 pb-12 md:px-12 lg:px-16" id="portfolios">
+        <h2 className="mb-6 text-xl font-semibold">Portofolio</h2>
 
         {portfoliosLoading ? (
-          <div className="grid gap-6 md:grid-cols-2">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="space-y-3">
-                <Skeleton className="aspect-video w-full rounded-lg" />
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="space-y-3 rounded-lg border p-3">
+                <Skeleton className="aspect-[4/3] w-full rounded-lg" />
                 <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
               </div>
             ))}
           </div>
@@ -86,7 +81,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
             <p className="text-muted-foreground">Belum ada portofolio.</p>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {portfolios.map((portfolio) => (
               <PortfolioCard key={portfolio.id} portfolio={portfolio} showStatus={isOwner} />
             ))}

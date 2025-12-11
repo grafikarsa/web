@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
         hostname: "picsum.photos",
       },
       {
+        protocol: "https",
+        hostname: "i.pravatar.cc",
+      },
+      {
         protocol: "http",
         hostname: "localhost",
         port: "9000",

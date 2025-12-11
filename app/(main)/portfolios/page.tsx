@@ -1,23 +1,38 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { portfoliosApi, tagsApi } from '@/lib/api';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { portfoliosApi, tagsApi, publicApi } from '@/lib/api';
 import { PortfolioCard } from '@/components/portfolio/portfolio-card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Search, X } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+
+const ITEMS_PER_PAGE = 20;
 
 function PortfoliosSkeleton() {
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: 9 }).map((_, i) => (
-        <div key={i} className="space-y-3">
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div key={i} className="space-y-3 rounded-lg border bg-card p-3">
           <Skeleton className="aspect-video w-full rounded-lg" />
-          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-5 w-3/4" />
           <Skeleton className="h-4 w-1/2" />
+          <div className="flex gap-2">
+            <Skeleton className="h-5 w-16 rounded-full" />
+            <Skeleton className="h-5 w-20 rounded-full" />
+          </div>
         </div>
       ))}
     </div>
@@ -25,54 +40,219 @@ function PortfoliosSkeleton() {
 }
 
 export default function PortfoliosPage() {
-  const [search, setSearch] = useState('');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
+  // Read from URL params
+  const searchQuery = searchParams.get('search') || '';
+  const jurusanKode = searchParams.get('jurusan') || 'all';
+  const kelasNama = searchParams.get('kelas') || 'all';
+  const sortBy = searchParams.get('sort') || '-published_at';
+  const page = parseInt(searchParams.get('page') || '1', 10);
+  const tagParam = searchParams.get('tags') || '';
+
+  // Local state for search input
+  const [searchInput, setSearchInput] = useState(searchQuery);
+
+  // Parse selected tags from URL
+  const selectedTags = useMemo(() => {
+    return tagParam ? tagParam.split(',').filter(Boolean) : [];
+  }, [tagParam]);
+
+  // Fetch tags
   const { data: tagsData } = useQuery({
     queryKey: ['tags'],
     queryFn: () => tagsApi.getTags(),
   });
 
+  // Fetch jurusan for filter
+  const { data: jurusanData } = useQuery({
+    queryKey: ['jurusan'],
+    queryFn: () => publicApi.getJurusan(),
+  });
+
+  // Fetch kelas for filter
+  const { data: kelasData } = useQuery({
+    queryKey: ['kelas'],
+    queryFn: () => publicApi.getKelas(),
+  });
+
+  const tags = tagsData?.data || [];
+  const jurusanList = jurusanData?.data || [];
+  const kelasList = kelasData?.data || [];
+
+  // Find jurusan ID from kode for API call
+  const selectedJurusan = useMemo(() => {
+    if (jurusanKode === 'all') return null;
+    return jurusanList.find((j) => j.kode === jurusanKode);
+  }, [jurusanKode, jurusanList]);
+
+  // Find kelas ID from nama for API call
+  const selectedKelas = useMemo(() => {
+    if (kelasNama === 'all') return null;
+    return kelasList.find((k) => k.nama === kelasNama);
+  }, [kelasNama, kelasList]);
+
+  // Filter kelas list by selected jurusan
+  const filteredKelasList = useMemo(() => {
+    if (!selectedJurusan) return kelasList;
+    return kelasList.filter((k) => k.jurusan.id === selectedJurusan.id);
+  }, [kelasList, selectedJurusan]);
+
+  // Update URL with new params
+  const updateParams = useCallback(
+    (updates: Record<string, string | null>, resetPage = true) => {
+      const params = new URLSearchParams(searchParams.toString());
+
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value === null || value === '' || value === 'all') {
+          params.delete(key);
+        } else {
+          params.set(key, value);
+        }
+      });
+
+      if (resetPage && !('page' in updates)) {
+        params.delete('page');
+      }
+
+      const queryString = params.toString();
+      router.push(queryString ? `/portfolios?${queryString}` : '/portfolios', { scroll: false });
+    },
+    [router, searchParams]
+  );
+
+  // Handle search submit
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateParams({ search: searchInput || null });
+  };
+
+  // Handle jurusan change - also reset kelas
+  const handleJurusanChange = (value: string) => {
+    updateParams({ jurusan: value === 'all' ? null : value, kelas: null });
+  };
+
+  // Handle tag toggle
+  const toggleTag = (tagId: string) => {
+    const newTags = selectedTags.includes(tagId)
+      ? selectedTags.filter((id) => id !== tagId)
+      : [...selectedTags, tagId];
+    updateParams({ tags: newTags.length > 0 ? newTags.join(',') : null });
+  };
+
+  // Fetch portfolios with filters and pagination
   const { data, isLoading, error } = useQuery({
-    queryKey: ['portfolios', search, selectedTags],
+    queryKey: ['portfolios', searchQuery, selectedJurusan?.id, selectedKelas?.id, selectedTags, sortBy, page],
     queryFn: () =>
       portfoliosApi.getPortfolios({
-        search: search || undefined,
+        search: searchQuery || undefined,
+        jurusan_id: selectedJurusan?.id || undefined,
+        kelas_id: selectedKelas?.id || undefined,
         tag_ids: selectedTags.length > 0 ? selectedTags.join(',') : undefined,
-        limit: 50,
+        sort: sortBy,
+        page,
+        limit: ITEMS_PER_PAGE,
       }),
+    enabled: jurusanList.length > 0 || jurusanKode === 'all',
   });
 
   const portfolios = data?.data || [];
-  const tags = tagsData?.data || [];
+  const meta = data?.meta;
 
-  const toggleTag = (tagId: string) => {
-    setSelectedTags((prev) =>
-      prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
-    );
+  const hasActiveFilters =
+    searchQuery || jurusanKode !== 'all' || kelasNama !== 'all' || selectedTags.length > 0;
+
+  const clearFilters = () => {
+    setSearchInput('');
+    router.push('/portfolios', { scroll: false });
+  };
+
+  const handlePageChange = (newPage: number) => {
+    updateParams({ page: newPage > 1 ? newPage.toString() : null }, false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="mb-2 text-3xl font-bold">Katalog Portofolio Siswa SMKN 4 Malang</h1>
-        <p className="text-muted-foreground">Jelajahi karya-karya terbaik dari siswa dan alumni</p>
+    <div className="container mx-auto px-6 pb-12 pt-24 md:px-12 lg:px-16">
+      {/* Header - Centered */}
+      <div className="mx-auto mb-8 max-w-2xl text-center">
+        <h1 className="mb-2 text-3xl font-bold md:text-4xl">Katalog Portofolio</h1>
+        <p className="text-muted-foreground">
+          Jelajahi karya-karya terbaik dari siswa dan alumni SMKN 4 Malang
+        </p>
       </div>
 
-      {/* Search */}
-      <div className="relative mb-4 max-w-md">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Cari portofolio..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-10"
-        />
+      {/* Search - Centered with submit button */}
+      <form onSubmit={handleSearchSubmit} className="mx-auto mb-6 max-w-md">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Cari portofolio..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="rounded-full pl-11"
+            />
+          </div>
+          <Button type="submit" className="rounded-full">
+            Cari
+          </Button>
+        </div>
+      </form>
+
+      {/* Filters - Centered */}
+      <div className="mx-auto mb-6 flex max-w-3xl flex-wrap items-center justify-center gap-3">
+        <Select value={jurusanKode} onValueChange={handleJurusanChange}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Jurusan" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua Jurusan</SelectItem>
+            {jurusanList.map((j) => (
+              <SelectItem key={j.id} value={j.kode}>
+                {j.nama}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={kelasNama} onValueChange={(v) => updateParams({ kelas: v === 'all' ? null : v })}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Kelas" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua Kelas</SelectItem>
+            {filteredKelasList.map((k) => (
+              <SelectItem key={k.id} value={k.nama}>
+                {k.nama}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={sortBy} onValueChange={(v) => updateParams({ sort: v === '-published_at' ? null : v })}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Urutkan" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="-published_at">Terbaru</SelectItem>
+            <SelectItem value="-like_count">Terpopuler</SelectItem>
+            <SelectItem value="judul">Judul A-Z</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {hasActiveFilters && (
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
+            <X className="h-4 w-4" />
+            Reset
+          </Button>
+        )}
       </div>
 
       {/* Tags Filter */}
       {tags.length > 0 && (
-        <div className="mb-6 flex flex-wrap gap-2">
+        <div className="mx-auto mb-8 flex max-w-4xl flex-wrap justify-center gap-2">
           {tags.map((tag) => (
             <Badge
               key={tag.id}
@@ -87,25 +267,96 @@ export default function PortfoliosPage() {
         </div>
       )}
 
-      {/* Portfolios Grid */}
+      {/* Results count */}
+      {!isLoading && meta && (
+        <p className="mb-6 text-center text-sm text-muted-foreground">
+          Menampilkan {portfolios.length} dari {meta.total_count} portofolio
+          {meta.total_pages > 1 && ` • Halaman ${meta.current_page} dari ${meta.total_pages}`}
+        </p>
+      )}
+
+      {/* Portfolios Grid - 4 columns */}
       {isLoading ? (
         <PortfoliosSkeleton />
       ) : error ? (
-        <p className="text-muted-foreground">Gagal memuat data. Silakan coba lagi.</p>
+        <p className="text-center text-muted-foreground">
+          Gagal memuat data. Silakan coba lagi.
+        </p>
       ) : portfolios.length === 0 ? (
         <div className="rounded-lg border border-dashed p-12 text-center">
           <p className="text-muted-foreground">
-            {search || selectedTags.length > 0
-              ? 'Tidak ada portofolio yang ditemukan.'
+            {hasActiveFilters
+              ? 'Tidak ada portofolio yang ditemukan dengan filter ini.'
               : 'Belum ada portofolio.'}
           </p>
+          {hasActiveFilters && (
+            <Button variant="link" onClick={clearFilters} className="mt-2">
+              Reset filter
+            </Button>
+          )}
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {portfolios.map((portfolio) => (
-            <PortfolioCard key={portfolio.id} portfolio={portfolio} />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {portfolios.map((portfolio) => (
+              <PortfolioCard key={portfolio.id} portfolio={portfolio} />
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {meta && meta.total_pages > 1 && (
+            <div className="mt-10 flex items-center justify-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(page - 1)}
+                disabled={page <= 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Sebelumnya
+              </Button>
+
+              <div className="flex items-center gap-1">
+                {Array.from({ length: meta.total_pages }, (_, i) => i + 1)
+                  .filter((p) => {
+                    return (
+                      p === 1 ||
+                      p === meta.total_pages ||
+                      Math.abs(p - page) <= 1
+                    );
+                  })
+                  .map((p, idx, arr) => {
+                    const showEllipsisBefore = idx > 0 && p - arr[idx - 1] > 1;
+                    return (
+                      <span key={p} className="flex items-center">
+                        {showEllipsisBefore && (
+                          <span className="px-2 text-muted-foreground">...</span>
+                        )}
+                        <Button
+                          variant={p === page ? 'default' : 'outline'}
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => handlePageChange(p)}
+                        >
+                          {p}
+                        </Button>
+                      </span>
+                    );
+                  })}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(page + 1)}
+                disabled={page >= (meta?.total_pages || 1)}
+              >
+                Selanjutnya
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

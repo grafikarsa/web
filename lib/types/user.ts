@@ -73,6 +73,8 @@ export interface UserCard {
   role: UserRole;
   kelas?: Kelas;
   jurusan?: Jurusan;
+  tahun_masuk?: number;
+  tahun_lulus?: number;
 }
 
 export interface FollowUser extends UserCard {

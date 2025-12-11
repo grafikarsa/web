@@ -1,90 +1,105 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import React from 'react';
+import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Menu, X } from 'lucide-react';
-import { useState } from 'react';
 import { ThemeToggle } from './theme-toggle';
 
-const navItems = [
-  { href: '/', label: 'Beranda' },
-  { href: '/users', label: 'Siswa' },
-  { href: '/portfolios', label: 'Portofolio' },
+const menuItems = [
+  { name: 'Beranda', href: '/' },
+  { name: 'Siswa', href: '/users' },
+  { name: 'Portofolio', href: '/portfolios' },
 ];
 
 export function GuestNavbar() {
-  const pathname = usePathname();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [menuState, setMenuState] = React.useState(false);
+  const [isScrolled, setIsScrolled] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <nav className="container mx-auto flex h-16 items-center justify-between px-4">
-        {/* Logo */}
-        <Link href="/" className="flex items-center space-x-2">
-          <span className="text-xl font-bold text-primary">Grafikarsa</span>
-        </Link>
-
-        {/* Desktop Navigation */}
-        <div className="hidden md:flex md:items-center md:space-x-6">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'text-sm font-medium transition-colors hover:text-primary',
-                pathname === item.href ? 'text-primary' : 'text-muted-foreground'
-              )}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </div>
-
-        {/* Right side */}
-        <div className="flex items-center space-x-4">
-          <ThemeToggle />
-          <Link href="/login" className="hidden md:block">
-            <Button>Login</Button>
-          </Link>
-
-          {/* Mobile menu button */}
-          <button
-            className="md:hidden"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Toggle menu"
-          >
-            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
-        </div>
-      </nav>
-
-      {/* Mobile Navigation */}
-      {mobileMenuOpen && (
-        <div className="border-t md:hidden">
-          <div className="container mx-auto space-y-1 px-4 py-4">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  'block rounded-md px-3 py-2 text-base font-medium transition-colors',
-                  pathname === item.href
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:bg-muted'
-                )}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                {item.label}
+    <header>
+      <nav data-state={menuState && 'active'} className="fixed z-20 w-full px-2">
+        <div
+          className={cn(
+            'mx-auto mt-2 max-w-6xl rounded-2xl px-6 backdrop-blur-md transition-all duration-300 lg:px-12',
+            isScrolled
+              ? 'max-w-4xl border bg-background/70 lg:px-5'
+              : 'bg-background/30'
+          )}
+        >
+          <div className="relative flex flex-wrap items-center justify-between gap-6 py-3 lg:gap-0 lg:py-4">
+            <div className="flex w-full justify-between lg:w-auto">
+              <Link href="/" aria-label="home" className="flex items-center space-x-2">
+                <span className="text-xl font-bold text-primary">Grafikarsa</span>
               </Link>
-            ))}
-            <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
-              <Button className="mt-4 w-full">Login</Button>
-            </Link>
+
+              <button
+                onClick={() => setMenuState(!menuState)}
+                aria-label={menuState ? 'Close Menu' : 'Open Menu'}
+                className="relative z-20 -m-2.5 -mr-4 block cursor-pointer p-2.5 lg:hidden"
+              >
+                <Menu className="m-auto size-6 duration-200 in-data-[state=active]:rotate-180 in-data-[state=active]:scale-0 in-data-[state=active]:opacity-0" />
+                <X className="absolute inset-0 m-auto size-6 -rotate-180 scale-0 opacity-0 duration-200 in-data-[state=active]:rotate-0 in-data-[state=active]:scale-100 in-data-[state=active]:opacity-100" />
+              </button>
+            </div>
+
+            <div className="absolute inset-0 m-auto hidden size-fit lg:block">
+              <ul className="flex gap-8 text-sm">
+                {menuItems.map((item, index) => (
+                  <li key={index}>
+                    <Link
+                      href={item.href}
+                      className="block text-muted-foreground duration-150 hover:text-accent-foreground"
+                    >
+                      <span>{item.name}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="mb-6 hidden w-full flex-wrap items-center justify-end space-y-8 rounded-3xl border bg-background p-6 shadow-2xl shadow-zinc-300/20 in-data-[state=active]:block md:flex-nowrap lg:m-0 lg:flex lg:w-fit lg:gap-6 lg:space-y-0 lg:border-transparent lg:bg-transparent lg:p-0 lg:shadow-none lg:in-data-[state=active]:flex dark:shadow-none dark:lg:bg-transparent">
+              <div className="lg:hidden">
+                <ul className="space-y-6 text-base">
+                  {menuItems.map((item, index) => (
+                    <li key={index}>
+                      <Link
+                        href={item.href}
+                        className="block text-muted-foreground duration-150 hover:text-accent-foreground"
+                        onClick={() => setMenuState(false)}
+                      >
+                        <span>{item.name}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
+                <ThemeToggle />
+                <Button asChild variant="outline" size="sm" className={cn(isScrolled && 'lg:hidden')}>
+                  <Link href="/login">
+                    <span>Login</span>
+                  </Link>
+                </Button>
+                <Button asChild size="sm" className={cn(isScrolled ? 'lg:inline-flex' : 'hidden')}>
+                  <Link href="/login">
+                    <span>Login</span>
+                  </Link>
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
-      )}
+      </nav>
     </header>
   );
 }
