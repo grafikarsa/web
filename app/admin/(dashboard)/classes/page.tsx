@@ -1,28 +1,42 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { DataTable, Column } from '@/components/admin/data-table';
-import { adminClassesApi, adminMajorsApi, Class } from '@/lib/api/admin';
+import { ConfirmDialog } from '@/components/admin/confirm-dialog';
+import {
+  adminClassesApi,
+  adminMajorsApi,
+  adminAcademicYearsApi,
+  Class,
+} from '@/lib/api/admin';
 
 export default function AdminClassesPage() {
   const queryClient = useQueryClient();
   const [editClass, setEditClass] = useState<Class | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [deleteClass, setDeleteClass] = useState<Class | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-classes'],
@@ -34,38 +48,71 @@ export default function AdminClassesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-classes'] });
       toast.success('Kelas berhasil dihapus');
+      setDeleteClass(null);
     },
     onError: () => {
-      toast.error('Gagal menghapus kelas');
+      toast.error('Gagal menghapus kelas. Pastikan tidak ada siswa di kelas ini.');
     },
   });
 
   const classes = data?.data || [];
 
   const columns: Column<Class>[] = [
-    { key: 'nama', header: 'Nama Kelas' },
+    {
+      key: 'nama',
+      header: 'Nama Kelas',
+      render: (c) => <span className="font-semibold">{c.nama}</span>,
+    },
     {
       key: 'tingkat',
       header: 'Tingkat',
-      render: (c) => <Badge variant="outline">Kelas {c.tingkat}</Badge>,
+      render: (c) => (
+        <Badge variant="outline">
+          {c.tingkat === 10 ? 'X' : c.tingkat === 11 ? 'XI' : 'XII'}
+        </Badge>
+      ),
     },
     {
       key: 'jurusan',
       header: 'Jurusan',
-      render: (c) => c.jurusan?.nama || '-',
+      render: (c) => (
+        <span className="text-muted-foreground">{c.jurusan?.nama || '-'}</span>
+      ),
+    },
+    {
+      key: 'tahun_ajaran',
+      header: 'Tahun Ajaran',
+      render: (c) =>
+        c.tahun_ajaran ? (
+          <Badge variant="secondary">
+            {c.tahun_ajaran.tahun_mulai}/{c.tahun_ajaran.tahun_mulai + 1}
+          </Badge>
+        ) : (
+          '-'
+        ),
+    },
+    {
+      key: 'student_count',
+      header: 'Siswa',
+      render: (c) => (
+        <div className="flex items-center gap-1.5 text-muted-foreground">
+          <Users className="h-4 w-4" />
+          <span>{c.student_count || 0}</span>
+        </div>
+      ),
     },
   ];
 
-  const handleDelete = (kelas: Class) => {
-    if (confirm(`Yakin ingin menghapus kelas "${kelas.nama}"?`)) {
-      deleteMutation.mutate(kelas.id);
-    }
-  };
-
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Kelas</h1>
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Kelola Kelas</h1>
+          <p className="text-sm text-muted-foreground">
+            Kelola data kelas dan rombongan belajar
+          </p>
+        </div>
         <Button onClick={() => setIsCreateOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Tambah Kelas
@@ -77,9 +124,10 @@ export default function AdminClassesPage() {
         columns={columns}
         isLoading={isLoading}
         onEdit={setEditClass}
-        onDelete={handleDelete}
+        onDelete={setDeleteClass}
       />
 
+      {/* Form Dialog */}
       <ClassFormDialog
         kelas={editClass}
         open={isCreateOpen || !!editClass}
@@ -87,6 +135,23 @@ export default function AdminClassesPage() {
           setIsCreateOpen(false);
           setEditClass(null);
         }}
+      />
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        open={!!deleteClass}
+        onOpenChange={() => setDeleteClass(null)}
+        title="Hapus Kelas"
+        description={
+          <>
+            Yakin ingin menghapus kelas <strong>&quot;{deleteClass?.nama}&quot;</strong>? Kelas tidak
+            dapat dihapus jika masih memiliki siswa.
+          </>
+        }
+        confirmText="Hapus"
+        variant="destructive"
+        isLoading={deleteMutation.isPending}
+        onConfirm={() => deleteClass && deleteMutation.mutate(deleteClass.id)}
       />
     </div>
   );
@@ -104,30 +169,57 @@ function ClassFormDialog({
   const queryClient = useQueryClient();
   const isEdit = !!kelas;
   const [formData, setFormData] = useState({
-    nama: kelas?.nama || '',
-    tingkat: kelas?.tingkat?.toString() || '10',
-    jurusan_id: kelas?.jurusan_id || '',
+    tingkat: '10',
+    rombel: 'A',
+    jurusan_id: '',
+    tahun_ajaran_id: '',
   });
+
+  useEffect(() => {
+    if (open) {
+      if (kelas) {
+        setFormData({
+          tingkat: kelas.tingkat.toString(),
+          rombel: kelas.rombel || 'A',
+          jurusan_id: kelas.jurusan_id || '',
+          tahun_ajaran_id: kelas.tahun_ajaran_id || '',
+        });
+      } else {
+        setFormData({
+          tingkat: '10',
+          rombel: 'A',
+          jurusan_id: '',
+          tahun_ajaran_id: '',
+        });
+      }
+    }
+  }, [kelas, open]);
 
   const { data: majorsData } = useQuery({
     queryKey: ['admin-majors'],
     queryFn: () => adminMajorsApi.getMajors(),
   });
 
+  const { data: yearsData } = useQuery({
+    queryKey: ['admin-academic-years'],
+    queryFn: () => adminAcademicYearsApi.getAcademicYears(),
+  });
+
   const majors = majorsData?.data || [];
+  const years = yearsData?.data || [];
 
   const createMutation = useMutation({
     mutationFn: () =>
       adminClassesApi.createClass({
-        nama: formData.nama,
         tingkat: parseInt(formData.tingkat),
+        rombel: formData.rombel,
         jurusan_id: formData.jurusan_id,
+        tahun_ajaran_id: formData.tahun_ajaran_id,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-classes'] });
       toast.success('Kelas berhasil dibuat');
       onClose();
-      setFormData({ nama: '', tingkat: '10', jurusan_id: '' });
     },
     onError: () => {
       toast.error('Gagal membuat kelas');
@@ -137,8 +229,8 @@ function ClassFormDialog({
   const updateMutation = useMutation({
     mutationFn: () =>
       adminClassesApi.updateClass(kelas!.id, {
-        nama: formData.nama,
         tingkat: parseInt(formData.tingkat),
+        rombel: formData.rombel,
         jurusan_id: formData.jurusan_id,
       }),
     onSuccess: () => {
@@ -162,58 +254,154 @@ function ClassFormDialog({
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 
+  // Preview nama kelas
+  const selectedJurusan = majors.find((m) => m.id === formData.jurusan_id);
+  const tingkatRomawi =
+    formData.tingkat === '10' ? 'X' : formData.tingkat === '11' ? 'XI' : 'XII';
+  const previewNama = selectedJurusan
+    ? `${tingkatRomawi}-${selectedJurusan.kode.toUpperCase()}-${formData.rombel}`
+    : '';
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit Kelas' : 'Tambah Kelas'}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="nama">Nama Kelas</Label>
-            <Input
-              id="nama"
-              value={formData.nama}
-              onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-              placeholder="Contoh: X RPL 1"
-              required
-            />
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-primary/10 p-2">
+              <Users className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <DialogTitle>{isEdit ? 'Edit Kelas' : 'Tambah Kelas Baru'}</DialogTitle>
+              <DialogDescription>
+                {isEdit
+                  ? 'Ubah informasi kelas yang sudah ada'
+                  : 'Tambahkan kelas/rombongan belajar baru'}
+              </DialogDescription>
+            </div>
           </div>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+          {/* Tingkat */}
           <div className="space-y-2">
-            <Label htmlFor="tingkat">Tingkat</Label>
-            <Select value={formData.tingkat} onValueChange={(v) => setFormData({ ...formData, tingkat: v })}>
+            <Label htmlFor="tingkat">
+              Tingkat <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              value={formData.tingkat}
+              onValueChange={(v) => setFormData({ ...formData, tingkat: v })}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="10">Kelas 10</SelectItem>
-                <SelectItem value="11">Kelas 11</SelectItem>
-                <SelectItem value="12">Kelas 12</SelectItem>
+                <SelectItem value="10">Kelas 10 (X)</SelectItem>
+                <SelectItem value="11">Kelas 11 (XI)</SelectItem>
+                <SelectItem value="12">Kelas 12 (XII)</SelectItem>
               </SelectContent>
             </Select>
           </div>
+
+          {/* Jurusan */}
           <div className="space-y-2">
-            <Label htmlFor="jurusan">Jurusan</Label>
-            <Select value={formData.jurusan_id} onValueChange={(v) => setFormData({ ...formData, jurusan_id: v })}>
+            <Label htmlFor="jurusan">
+              Jurusan <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              value={formData.jurusan_id}
+              onValueChange={(v) => setFormData({ ...formData, jurusan_id: v })}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Pilih jurusan" />
               </SelectTrigger>
               <SelectContent>
                 {majors.map((m) => (
                   <SelectItem key={m.id} value={m.id}>
-                    {m.nama}
+                    {m.nama} ({m.kode.toUpperCase()})
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {majors.length === 0 && (
+              <p className="text-xs text-amber-600">
+                Belum ada jurusan. Tambahkan jurusan terlebih dahulu.
+              </p>
+            )}
           </div>
-          <DialogFooter>
+
+          {/* Rombel */}
+          <div className="space-y-2">
+            <Label htmlFor="rombel">
+              Rombel <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="rombel"
+              value={formData.rombel}
+              onChange={(e) =>
+                setFormData({ ...formData, rombel: e.target.value.toUpperCase() })
+              }
+              placeholder="A, B, C, ..."
+              maxLength={1}
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              Satu huruf untuk identifikasi rombongan belajar (A-Z)
+            </p>
+          </div>
+
+          {/* Tahun Ajaran (hanya untuk create) */}
+          {!isEdit && (
+            <div className="space-y-2">
+              <Label htmlFor="tahun_ajaran">
+                Tahun Ajaran <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={formData.tahun_ajaran_id}
+                onValueChange={(v) => setFormData({ ...formData, tahun_ajaran_id: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih tahun ajaran" />
+                </SelectTrigger>
+                <SelectContent>
+                  {years.map((y) => (
+                    <SelectItem key={y.id} value={y.id}>
+                      {y.tahun_mulai}/{y.tahun_mulai + 1}
+                      {y.is_active && ' (Aktif)'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {years.length === 0 && (
+                <p className="text-xs text-amber-600">
+                  Belum ada tahun ajaran. Tambahkan tahun ajaran terlebih dahulu.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Preview */}
+          {previewNama && (
+            <div className="rounded-lg border bg-muted/50 p-3">
+              <p className="text-xs font-medium text-muted-foreground">Preview nama kelas:</p>
+              <p className="mt-1 text-lg font-semibold">{previewNama}</p>
+            </div>
+          )}
+
+          <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
               Batal
             </Button>
-            <Button type="submit" disabled={isPending || !formData.jurusan_id}>
+            <Button
+              type="submit"
+              disabled={
+                isPending ||
+                !formData.jurusan_id ||
+                !formData.rombel ||
+                (!isEdit && !formData.tahun_ajaran_id)
+              }
+            >
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEdit ? 'Simpan' : 'Buat'}
+              {isEdit ? 'Simpan Perubahan' : 'Buat Kelas'}
             </Button>
           </DialogFooter>
         </form>

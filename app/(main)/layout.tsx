@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { GuestNavbar, StudentSidebar, StudentHeader, Footer } from '@/components/layout';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,9 +18,22 @@ function LoadingScreen() {
 }
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const router = useRouter();
+  const { user, isAuthenticated, isLoading } = useAuthStore();
+
+  // Redirect admin to admin dashboard
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && user?.role === 'admin') {
+      router.push('/admin');
+    }
+  }, [isLoading, isAuthenticated, user, router]);
 
   if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  // If admin, show loading while redirecting
+  if (isAuthenticated && user?.role === 'admin') {
     return <LoadingScreen />;
   }
 
@@ -33,7 +48,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     );
   }
 
-  // Authenticated layout
+  // Authenticated student/alumni layout
   return (
     <div className="flex min-h-screen">
       <StudentSidebar />

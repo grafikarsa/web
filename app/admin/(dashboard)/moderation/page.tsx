@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Check, X, Eye, Loader2 } from 'lucide-react';
+import { Check, X, Eye, Loader2, Clock, FileText, AlertCircle } from 'lucide-react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -23,13 +24,17 @@ import { adminPortfoliosApi } from '@/lib/api/admin';
 import { PortfolioCard } from '@/lib/types';
 import { BlockRenderer } from '@/components/portfolio/block-renderer';
 import { portfoliosApi } from '@/lib/api';
+import { formatDate } from '@/lib/utils/format';
+
+type ReviewAction = 'approve' | 'reject';
 
 export default function ModerationPage() {
   const queryClient = useQueryClient();
   const [selectedPortfolio, setSelectedPortfolio] = useState<PortfolioCard | null>(null);
-  const [rejectNote, setRejectNote] = useState('');
-  const [showRejectDialog, setShowRejectDialog] = useState(false);
-  const [portfolioToReject, setPortfolioToReject] = useState<string | null>(null);
+  const [reviewNote, setReviewNote] = useState('');
+  const [showReviewDialog, setShowReviewDialog] = useState(false);
+  const [reviewAction, setReviewAction] = useState<ReviewAction>('approve');
+  const [portfolioToReview, setPortfolioToReview] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-moderation'],
@@ -43,10 +48,12 @@ export default function ModerationPage() {
   });
 
   const approveMutation = useMutation({
-    mutationFn: (id: string) => adminPortfoliosApi.approvePortfolio(id),
+    mutationFn: ({ id, note }: { id: string; note?: string }) =>
+      adminPortfoliosApi.approvePortfolio(id, note),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-moderation'] });
       toast.success('Portfolio berhasil disetujui');
+      closeReviewDialog();
       setSelectedPortfolio(null);
     },
     onError: () => {
@@ -55,13 +62,12 @@ export default function ModerationPage() {
   });
 
   const rejectMutation = useMutation({
-    mutationFn: ({ id, note }: { id: string; note: string }) => adminPortfoliosApi.rejectPortfolio(id, note),
+    mutationFn: ({ id, note }: { id: string; note: string }) =>
+      adminPortfoliosApi.rejectPortfolio(id, note),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-moderation'] });
       toast.success('Portfolio berhasil ditolak');
-      setShowRejectDialog(false);
-      setRejectNote('');
-      setPortfolioToReject(null);
+      closeReviewDialog();
       setSelectedPortfolio(null);
     },
     onError: () => {
@@ -71,24 +77,48 @@ export default function ModerationPage() {
 
   const portfolios = data?.data || [];
 
-  const handleReject = (id: string) => {
-    setPortfolioToReject(id);
-    setShowRejectDialog(true);
+  const openReviewDialog = (id: string, action: ReviewAction) => {
+    setPortfolioToReview(id);
+    setReviewAction(action);
+    setReviewNote('');
+    setShowReviewDialog(true);
   };
 
-  const confirmReject = () => {
-    if (portfolioToReject && rejectNote.trim()) {
-      rejectMutation.mutate({ id: portfolioToReject, note: rejectNote });
+  const closeReviewDialog = () => {
+    setShowReviewDialog(false);
+    setReviewNote('');
+    setPortfolioToReview(null);
+  };
+
+  const confirmReview = () => {
+    if (!portfolioToReview) return;
+
+    if (reviewAction === 'approve') {
+      approveMutation.mutate({
+        id: portfolioToReview,
+        note: reviewNote.trim() || undefined,
+      });
+    } else {
+      if (!reviewNote.trim()) {
+        toast.error('Catatan penolakan wajib diisi');
+        return;
+      }
+      rejectMutation.mutate({ id: portfolioToReview, note: reviewNote });
     }
   };
+
+  const isPending = approveMutation.isPending || rejectMutation.isPending;
 
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-8 w-48" />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-9 w-48" />
+          <Skeleton className="h-6 w-24" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-48" />
+            <Skeleton key={i} className="h-72" />
           ))}
         </div>
       </div>
@@ -97,139 +127,333 @@ export default function ModerationPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Moderation</h1>
-        <Badge variant="outline">{portfolios.length} pending</Badge>
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Moderasi Portfolio</h1>
+          <p className="text-sm text-muted-foreground">
+            Review dan setujui portfolio yang diajukan siswa
+          </p>
+        </div>
+        <Badge
+          variant={portfolios.length > 0 ? 'default' : 'secondary'}
+          className="w-fit gap-1.5 px-3 py-1.5"
+        >
+          <Clock className="h-3.5 w-3.5" />
+          {portfolios.length} menunggu review
+        </Badge>
       </div>
 
+      {/* Empty State */}
       {portfolios.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">Tidak ada portfolio yang menunggu review</p>
-          </CardContent>
+        <Card className="border-dashed py-16">
+          <div className="flex flex-col items-center justify-center">
+            <div className="rounded-full bg-muted p-4">
+              <FileText className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h3 className="mt-4 text-lg font-semibold">Tidak ada portfolio pending</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Semua portfolio sudah direview. Cek kembali nanti.
+            </p>
+          </div>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {portfolios.map((portfolio) => (
-            <Card key={portfolio.id} className="overflow-hidden">
-              <div className="aspect-video bg-muted">
-                {portfolio.thumbnail_url ? (
-                  <img
-                    src={portfolio.thumbnail_url}
-                    alt={portfolio.judul}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-muted-foreground">
-                    No thumbnail
+        /* Portfolio Grid - same as portfolios page */
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+          {portfolios.map((portfolio) => {
+            const firstTag = portfolio.tags && portfolio.tags.length > 0 ? portfolio.tags[0] : null;
+
+            return (
+              <Card
+                key={portfolio.id}
+                className="group gap-0 overflow-hidden border py-0 transition-shadow hover:shadow-lg"
+              >
+                <div className="p-3 pb-4">
+                  {/* Thumbnail - same aspect ratio as portfolio-card */}
+                  <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-muted">
+                    {portfolio.thumbnail_url ? (
+                      <Image
+                        src={portfolio.thumbnail_url}
+                        alt={portfolio.judul}
+                        fill
+                        className="object-cover transition-transform group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-muted-foreground">
+                        No Image
+                      </div>
+                    )}
+                    {/* Preview overlay on hover */}
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setSelectedPortfolio(portfolio)}
+                      >
+                        <Eye className="mr-2 h-4 w-4" />
+                        Preview
+                      </Button>
+                    </div>
                   </div>
-                )}
-              </div>
-              <CardHeader className="pb-2">
-                <CardTitle className="line-clamp-1 text-lg">{portfolio.judul}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="mb-4 flex items-center gap-2">
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src={portfolio.user?.avatar_url} />
-                    <AvatarFallback>{portfolio.user?.nama?.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm text-muted-foreground">{portfolio.user?.nama}</span>
+
+                  {/* Tag Badge */}
+                  {firstTag && (
+                    <Badge
+                      variant="secondary"
+                      className="mt-3 rounded-full px-2.5 py-0.5 text-xs font-normal"
+                    >
+                      {firstTag.nama}
+                    </Badge>
+                  )}
+
+                  {/* Title */}
+                  <h3 className="mt-2 line-clamp-2 font-semibold leading-tight">
+                    {portfolio.judul}
+                  </h3>
+
+                  {/* User Info & Date */}
+                  {portfolio.user && (
+                    <div className="mt-3 flex items-center gap-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={portfolio.user.avatar_url} alt={portfolio.user.nama} />
+                        <AvatarFallback className="text-xs">
+                          {portfolio.user.nama?.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium leading-tight">
+                          {portfolio.user.nama}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          Posted on {formatDate(portfolio.created_at)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="mt-4 flex gap-2">
+                    <Button
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => openReviewDialog(portfolio.id, 'approve')}
+                    >
+                      <Check className="mr-1.5 h-4 w-4" />
+                      Setujui
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="flex-1"
+                      onClick={() => openReviewDialog(portfolio.id, 'reject')}
+                    >
+                      <X className="mr-1.5 h-4 w-4" />
+                      Tolak
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => setSelectedPortfolio(portfolio)}>
-                    <Eye className="mr-2 h-4 w-4" />
-                    Preview
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => approveMutation.mutate(portfolio.id)}
-                    disabled={approveMutation.isPending}
-                  >
-                    <Check className="mr-2 h-4 w-4" />
-                    Approve
-                  </Button>
-                  <Button size="sm" variant="destructive" onClick={() => handleReject(portfolio.id)}>
-                    <X className="mr-2 h-4 w-4" />
-                    Reject
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       )}
 
       {/* Preview Dialog */}
       <Dialog open={!!selectedPortfolio} onOpenChange={() => setSelectedPortfolio(null)}>
-        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{selectedPortfolio?.judul}</DialogTitle>
-            <DialogDescription>
-              Oleh {selectedPortfolio?.user?.nama} (@{selectedPortfolio?.user?.username})
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            {detailLoading ? (
-              <div className="space-y-4">
-                <Skeleton className="h-48 w-full" />
-                <Skeleton className="h-24 w-full" />
+        <DialogContent className="flex max-h-[90vh] max-w-4xl flex-col gap-0 overflow-hidden p-0">
+          {/* Sticky Header */}
+          <div className="sticky top-0 z-10 border-b bg-background px-6 py-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <DialogTitle className="line-clamp-1 text-lg font-semibold">
+                  {selectedPortfolio?.judul}
+                </DialogTitle>
+                <DialogDescription className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                  <div className="flex items-center gap-1.5">
+                    <Avatar className="h-5 w-5">
+                      <AvatarImage src={selectedPortfolio?.user?.avatar_url} />
+                      <AvatarFallback className="text-[10px]">
+                        {selectedPortfolio?.user?.nama?.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium text-foreground">
+                      {selectedPortfolio?.user?.nama}
+                    </span>
+                    <span className="text-muted-foreground">
+                      @{selectedPortfolio?.user?.username}
+                    </span>
+                  </div>
+                  {selectedPortfolio?.user?.kelas_nama && (
+                    <>
+                      <span className="text-muted-foreground">•</span>
+                      <Badge variant="secondary" className="text-xs">
+                        {selectedPortfolio.user.kelas_nama}
+                      </Badge>
+                    </>
+                  )}
+                  {selectedPortfolio?.created_at && (
+                    <>
+                      <span className="text-muted-foreground">•</span>
+                      <span className="text-muted-foreground">
+                        {formatDate(selectedPortfolio.created_at)}
+                      </span>
+                    </>
+                  )}
+                </DialogDescription>
               </div>
-            ) : detailData?.data?.content_blocks ? (
-              <BlockRenderer blocks={detailData.data.content_blocks} />
-            ) : (
-              <p className="text-muted-foreground">Tidak ada konten</p>
+            </div>
+
+            {/* Tags */}
+            {selectedPortfolio?.tags && selectedPortfolio.tags.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {selectedPortfolio.tags.map((tag) => (
+                  <Badge key={tag.id} variant="outline" className="text-xs">
+                    {tag.nama}
+                  </Badge>
+                ))}
+              </div>
             )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedPortfolio(null)}>
+
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto px-6 py-6">
+            {/* Thumbnail */}
+            {selectedPortfolio?.thumbnail_url && (
+              <div className="relative mb-6 aspect-video w-full overflow-hidden rounded-lg bg-muted">
+                <Image
+                  src={selectedPortfolio.thumbnail_url}
+                  alt={selectedPortfolio.judul}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            )}
+
+            {/* Content Blocks */}
+            {detailLoading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-48 w-full rounded-lg" />
+                <Skeleton className="h-6 w-3/4" />
+                <Skeleton className="h-6 w-1/2" />
+                <Skeleton className="h-24 w-full rounded-lg" />
+              </div>
+            ) : detailData?.data?.content_blocks &&
+              detailData.data.content_blocks.length > 0 ? (
+              <div className="prose prose-sm max-w-none dark:prose-invert">
+                <BlockRenderer blocks={detailData.data.content_blocks} />
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="rounded-full bg-muted p-4">
+                  <AlertCircle className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <p className="mt-3 font-medium">Tidak ada konten</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Portfolio ini belum memiliki content blocks
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Sticky Footer */}
+          <div className="sticky bottom-0 flex items-center justify-between gap-4 border-t bg-background px-6 py-4">
+            <Button variant="ghost" onClick={() => setSelectedPortfolio(null)}>
               Tutup
             </Button>
-            <Button
-              onClick={() => approveMutation.mutate(selectedPortfolio!.id)}
-              disabled={approveMutation.isPending}
-            >
-              {approveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Approve
-            </Button>
-            <Button variant="destructive" onClick={() => handleReject(selectedPortfolio!.id)}>
-              Reject
-            </Button>
-          </DialogFooter>
+            <div className="flex gap-2">
+              <Button
+                variant="destructive"
+                onClick={() => openReviewDialog(selectedPortfolio!.id, 'reject')}
+              >
+                <X className="mr-1.5 h-4 w-4" />
+                Tolak
+              </Button>
+              <Button onClick={() => openReviewDialog(selectedPortfolio!.id, 'approve')}>
+                <Check className="mr-1.5 h-4 w-4" />
+                Setujui
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
-      {/* Reject Dialog */}
-      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+      {/* Review Confirmation Dialog */}
+      <Dialog open={showReviewDialog} onOpenChange={closeReviewDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Tolak Portfolio</DialogTitle>
-            <DialogDescription>Berikan alasan penolakan untuk pemilik portfolio</DialogDescription>
+            <DialogTitle className="flex items-center gap-2">
+              {reviewAction === 'approve' ? (
+                <>
+                  <div className="rounded-full bg-green-100 p-1.5 dark:bg-green-900/30">
+                    <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  </div>
+                  Setujui Portfolio
+                </>
+              ) : (
+                <>
+                  <div className="rounded-full bg-red-100 p-1.5 dark:bg-red-900/30">
+                    <X className="h-4 w-4 text-red-600 dark:text-red-400" />
+                  </div>
+                  Tolak Portfolio
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {reviewAction === 'approve'
+                ? 'Portfolio akan dipublish dan dapat dilihat oleh semua orang.'
+                : 'Portfolio akan dikembalikan ke pemilik untuk diperbaiki.'}
+            </DialogDescription>
           </DialogHeader>
+
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="reject-note">Catatan Penolakan</Label>
+              <Label htmlFor="review-note">
+                Catatan Review{' '}
+                {reviewAction === 'reject' ? (
+                  <span className="text-destructive">*</span>
+                ) : (
+                  <span className="text-muted-foreground">(opsional)</span>
+                )}
+              </Label>
               <Textarea
-                id="reject-note"
-                value={rejectNote}
-                onChange={(e) => setRejectNote(e.target.value)}
-                placeholder="Jelaskan alasan penolakan..."
+                id="review-note"
+                value={reviewNote}
+                onChange={(e) => setReviewNote(e.target.value)}
+                placeholder={
+                  reviewAction === 'approve'
+                    ? 'Berikan komentar atau apresiasi (opsional)...'
+                    : 'Jelaskan alasan penolakan dan saran perbaikan...'
+                }
                 rows={4}
+                className="resize-none"
               />
+              {reviewAction === 'reject' && (
+                <p className="text-xs text-muted-foreground">
+                  Catatan ini akan ditampilkan kepada pemilik portfolio
+                </p>
+              )}
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={closeReviewDialog} disabled={isPending}>
               Batal
             </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmReject}
-              disabled={!rejectNote.trim() || rejectMutation.isPending}
-            >
-              {rejectMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Tolak
-            </Button>
+            {reviewAction === 'approve' ? (
+              <Button onClick={confirmReview} disabled={isPending}>
+                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Setujui & Publish
+              </Button>
+            ) : (
+              <Button
+                variant="destructive"
+                onClick={confirmReview}
+                disabled={!reviewNote.trim() || isPending}
+              >
+                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Tolak Portfolio
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

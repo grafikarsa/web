@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -15,12 +17,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DataTable, Column } from '@/components/admin/data-table';
+import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { adminMajorsApi, Major } from '@/lib/api/admin';
 
 export default function AdminMajorsPage() {
   const queryClient = useQueryClient();
   const [editMajor, setEditMajor] = useState<Major | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [deleteMajor, setDeleteMajor] = useState<Major | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-majors'],
@@ -32,29 +36,42 @@ export default function AdminMajorsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-majors'] });
       toast.success('Jurusan berhasil dihapus');
+      setDeleteMajor(null);
     },
     onError: () => {
-      toast.error('Gagal menghapus jurusan');
+      toast.error('Gagal menghapus jurusan. Pastikan tidak ada kelas yang menggunakan jurusan ini.');
     },
   });
 
   const majors = data?.data || [];
 
   const columns: Column<Major>[] = [
-    { key: 'kode', header: 'Kode' },
-    { key: 'nama', header: 'Nama Jurusan' },
+    {
+      key: 'kode',
+      header: 'Kode',
+      render: (m) => (
+        <Badge variant="secondary" className="font-mono uppercase">
+          {m.kode}
+        </Badge>
+      ),
+    },
+    {
+      key: 'nama',
+      header: 'Nama Jurusan',
+      render: (m) => <span className="font-medium">{m.nama}</span>,
+    },
   ];
-
-  const handleDelete = (major: Major) => {
-    if (confirm(`Yakin ingin menghapus jurusan "${major.nama}"?`)) {
-      deleteMutation.mutate(major.id);
-    }
-  };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Jurusan</h1>
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Kelola Jurusan</h1>
+          <p className="text-sm text-muted-foreground">
+            Kelola data jurusan/kompetensi keahlian yang tersedia
+          </p>
+        </div>
         <Button onClick={() => setIsCreateOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Tambah Jurusan
@@ -66,9 +83,10 @@ export default function AdminMajorsPage() {
         columns={columns}
         isLoading={isLoading}
         onEdit={setEditMajor}
-        onDelete={handleDelete}
+        onDelete={setDeleteMajor}
       />
 
+      {/* Form Dialog */}
       <MajorFormDialog
         major={editMajor}
         open={isCreateOpen || !!editMajor}
@@ -76,6 +94,23 @@ export default function AdminMajorsPage() {
           setIsCreateOpen(false);
           setEditMajor(null);
         }}
+      />
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        open={!!deleteMajor}
+        onOpenChange={() => setDeleteMajor(null)}
+        title="Hapus Jurusan"
+        description={
+          <>
+            Yakin ingin menghapus jurusan <strong>&quot;{deleteMajor?.nama}&quot;</strong>? Jurusan
+            tidak dapat dihapus jika masih digunakan oleh kelas.
+          </>
+        }
+        confirmText="Hapus"
+        variant="destructive"
+        isLoading={deleteMutation.isPending}
+        onConfirm={() => deleteMajor && deleteMutation.mutate(deleteMajor.id)}
       />
     </div>
   );
@@ -93,9 +128,22 @@ function MajorFormDialog({
   const queryClient = useQueryClient();
   const isEdit = !!major;
   const [formData, setFormData] = useState({
-    nama: major?.nama || '',
-    kode: major?.kode || '',
+    nama: '',
+    kode: '',
   });
+
+  useEffect(() => {
+    if (open) {
+      if (major) {
+        setFormData({
+          nama: major.nama,
+          kode: major.kode,
+        });
+      } else {
+        setFormData({ nama: '', kode: '' });
+      }
+    }
+  }, [major, open]);
 
   const createMutation = useMutation({
     mutationFn: () => adminMajorsApi.createMajor(formData),
@@ -137,21 +185,43 @@ function MajorFormDialog({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit Jurusan' : 'Tambah Jurusan'}</DialogTitle>
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-primary/10 p-2">
+              <GraduationCap className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <DialogTitle>{isEdit ? 'Edit Jurusan' : 'Tambah Jurusan Baru'}</DialogTitle>
+              <DialogDescription>
+                {isEdit
+                  ? 'Ubah informasi jurusan yang sudah ada'
+                  : 'Tambahkan jurusan/kompetensi keahlian baru'}
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+
+        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div className="space-y-2">
-            <Label htmlFor="kode">Kode</Label>
+            <Label htmlFor="kode">
+              Kode Jurusan <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="kode"
               value={formData.kode}
-              onChange={(e) => setFormData({ ...formData, kode: e.target.value })}
-              placeholder="Contoh: RPL"
+              onChange={(e) => setFormData({ ...formData, kode: e.target.value.toLowerCase().replace(/[^a-z]/g, '') })}
+              placeholder="Contoh: rpl"
+              maxLength={10}
               required
             />
+            <p className="text-xs text-muted-foreground">
+              Singkatan jurusan dalam huruf kecil, hanya huruf (maks. 10 karakter)
+            </p>
           </div>
+
           <div className="space-y-2">
-            <Label htmlFor="nama">Nama Jurusan</Label>
+            <Label htmlFor="nama">
+              Nama Lengkap <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="nama"
               value={formData.nama}
@@ -160,13 +230,27 @@ function MajorFormDialog({
               required
             />
           </div>
-          <DialogFooter>
+
+          {/* Preview */}
+          {formData.kode && (
+            <div className="rounded-lg border bg-muted/50 p-3">
+              <p className="text-xs font-medium text-muted-foreground">Preview nama kelas:</p>
+              <p className="mt-1 font-semibold">
+                XII-{formData.kode.toUpperCase()}-A
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Kode disimpan: <code className="rounded bg-muted px-1">{formData.kode}</code>
+              </p>
+            </div>
+          )}
+
+          <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
               Batal
             </Button>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" disabled={isPending || !formData.nama.trim() || !formData.kode.trim()}>
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEdit ? 'Simpan' : 'Buat'}
+              {isEdit ? 'Simpan Perubahan' : 'Buat Jurusan'}
             </Button>
           </DialogFooter>
         </form>

@@ -13,15 +13,21 @@ export interface Class {
   id: string;
   nama: string;
   tingkat: number;
+  rombel: string;
   jurusan_id: string;
+  tahun_ajaran_id: string;
   jurusan?: Major;
+  tahun_ajaran?: AcademicYear;
+  student_count?: number;
   created_at: string;
 }
 
 export interface AcademicYear {
   id: string;
-  tahun: number;
+  tahun_mulai: number;
   is_active: boolean;
+  promotion_month: number;
+  promotion_day: number;
   created_at: string;
 }
 
@@ -80,8 +86,8 @@ export const adminPortfoliosApi = {
     return response.data;
   },
 
-  approvePortfolio: async (id: string) => {
-    const response = await api.post<ApiResponse<Portfolio>>(`/admin/portfolios/${id}/approve`);
+  approvePortfolio: async (id: string, note?: string) => {
+    const response = await api.post<ApiResponse<Portfolio>>(`/admin/portfolios/${id}/approve`, note ? { note } : undefined);
     return response.data;
   },
 
@@ -91,48 +97,48 @@ export const adminPortfoliosApi = {
   },
 };
 
-// Admin Majors API
+// Admin Majors API (Jurusan)
 export const adminMajorsApi = {
   getMajors: async (params?: PaginationParams) => {
-    const response = await api.get<ApiResponse<Major[]>>('/admin/majors', { params });
+    const response = await api.get<ApiResponse<Major[]>>('/admin/jurusan', { params });
     return response.data;
   },
 
   createMajor: async (data: { nama: string; kode: string }) => {
-    const response = await api.post<ApiResponse<Major>>('/admin/majors', data);
+    const response = await api.post<ApiResponse<Major>>('/admin/jurusan', data);
     return response.data;
   },
 
   updateMajor: async (id: string, data: { nama?: string; kode?: string }) => {
-    const response = await api.patch<ApiResponse<Major>>(`/admin/majors/${id}`, data);
+    const response = await api.patch<ApiResponse<Major>>(`/admin/jurusan/${id}`, data);
     return response.data;
   },
 
   deleteMajor: async (id: string) => {
-    const response = await api.delete<ApiResponse<null>>(`/admin/majors/${id}`);
+    const response = await api.delete<ApiResponse<null>>(`/admin/jurusan/${id}`);
     return response.data;
   },
 };
 
-// Admin Classes API
+// Admin Classes API (Kelas)
 export const adminClassesApi = {
-  getClasses: async (params?: PaginationParams & { jurusan_id?: string }) => {
-    const response = await api.get<ApiResponse<Class[]>>('/admin/classes', { params });
+  getClasses: async (params?: PaginationParams & { jurusan_id?: string; tahun_ajaran_id?: string; tingkat?: number }) => {
+    const response = await api.get<ApiResponse<Class[]>>('/admin/kelas', { params });
     return response.data;
   },
 
-  createClass: async (data: { nama: string; tingkat: number; jurusan_id: string }) => {
-    const response = await api.post<ApiResponse<Class>>('/admin/classes', data);
+  createClass: async (data: { tingkat: number; rombel: string; jurusan_id: string; tahun_ajaran_id: string }) => {
+    const response = await api.post<ApiResponse<Class>>('/admin/kelas', data);
     return response.data;
   },
 
-  updateClass: async (id: string, data: { nama?: string; tingkat?: number; jurusan_id?: string }) => {
-    const response = await api.patch<ApiResponse<Class>>(`/admin/classes/${id}`, data);
+  updateClass: async (id: string, data: { tingkat?: number; rombel?: string; jurusan_id?: string }) => {
+    const response = await api.patch<ApiResponse<Class>>(`/admin/kelas/${id}`, data);
     return response.data;
   },
 
   deleteClass: async (id: string) => {
-    const response = await api.delete<ApiResponse<null>>(`/admin/classes/${id}`);
+    const response = await api.delete<ApiResponse<null>>(`/admin/kelas/${id}`);
     return response.data;
   },
 };
@@ -140,27 +146,27 @@ export const adminClassesApi = {
 // Admin Academic Years API
 export const adminAcademicYearsApi = {
   getAcademicYears: async (params?: PaginationParams) => {
-    const response = await api.get<ApiResponse<AcademicYear[]>>('/admin/academic-years', { params });
+    const response = await api.get<ApiResponse<AcademicYear[]>>('/admin/tahun-ajaran', { params });
     return response.data;
   },
 
-  createAcademicYear: async (data: { tahun: number }) => {
-    const response = await api.post<ApiResponse<AcademicYear>>('/admin/academic-years', data);
+  createAcademicYear: async (data: { tahun_mulai: number; promotion_month?: number; promotion_day?: number }) => {
+    const response = await api.post<ApiResponse<AcademicYear>>('/admin/tahun-ajaran', data);
     return response.data;
   },
 
-  updateAcademicYear: async (id: string, data: { tahun?: number; is_active?: boolean }) => {
-    const response = await api.patch<ApiResponse<AcademicYear>>(`/admin/academic-years/${id}`, data);
+  updateAcademicYear: async (id: string, data: { tahun_mulai?: number; is_active?: boolean; promotion_month?: number; promotion_day?: number }) => {
+    const response = await api.patch<ApiResponse<AcademicYear>>(`/admin/tahun-ajaran/${id}`, data);
     return response.data;
   },
 
   deleteAcademicYear: async (id: string) => {
-    const response = await api.delete<ApiResponse<null>>(`/admin/academic-years/${id}`);
+    const response = await api.delete<ApiResponse<null>>(`/admin/tahun-ajaran/${id}`);
     return response.data;
   },
 
   setActive: async (id: string) => {
-    const response = await api.post<ApiResponse<AcademicYear>>(`/admin/academic-years/${id}/set-active`);
+    const response = await api.post<ApiResponse<AcademicYear>>(`/admin/tahun-ajaran/${id}/set-active`);
     return response.data;
   },
 };

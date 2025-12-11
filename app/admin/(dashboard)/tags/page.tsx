@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, Tag as TagIcon, Hash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -15,6 +16,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DataTable, Column } from '@/components/admin/data-table';
+import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { adminTagsApi } from '@/lib/api/admin';
 import { Tag } from '@/lib/types';
 import { useDebounce } from '@/lib/hooks/use-debounce';
@@ -24,6 +26,7 @@ export default function AdminTagsPage() {
   const [search, setSearch] = useState('');
   const [editTag, setEditTag] = useState<Tag | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [deleteTag, setDeleteTag] = useState<Tag | null>(null);
   const debouncedSearch = useDebounce(search, 300);
 
   const { data, isLoading } = useQuery({
@@ -36,6 +39,7 @@ export default function AdminTagsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-tags'] });
       toast.success('Tag berhasil dihapus');
+      setDeleteTag(null);
     },
     onError: () => {
       toast.error('Gagal menghapus tag');
@@ -45,19 +49,28 @@ export default function AdminTagsPage() {
   const tags = data?.data || [];
 
   const columns: Column<Tag>[] = [
-    { key: 'nama', header: 'Nama Tag' },
+    {
+      key: 'nama',
+      header: 'Nama Tag',
+      render: (tag) => (
+        <div className="flex items-center gap-2">
+          <Hash className="h-4 w-4 text-muted-foreground" />
+          <span className="font-medium">{tag.nama}</span>
+        </div>
+      ),
+    },
   ];
-
-  const handleDelete = (tag: Tag) => {
-    if (confirm(`Yakin ingin menghapus tag "${tag.nama}"?`)) {
-      deleteMutation.mutate(tag.id);
-    }
-  };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Tags</h1>
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Kelola Tags</h1>
+          <p className="text-sm text-muted-foreground">
+            Kelola tag untuk kategorisasi portfolio siswa
+          </p>
+        </div>
         <Button onClick={() => setIsCreateOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Tambah Tag
@@ -71,9 +84,10 @@ export default function AdminTagsPage() {
         searchPlaceholder="Cari tag..."
         onSearch={setSearch}
         onEdit={setEditTag}
-        onDelete={handleDelete}
+        onDelete={setDeleteTag}
       />
 
+      {/* Form Dialog */}
       <TagFormDialog
         tag={editTag}
         open={isCreateOpen || !!editTag}
@@ -81,6 +95,23 @@ export default function AdminTagsPage() {
           setIsCreateOpen(false);
           setEditTag(null);
         }}
+      />
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        open={!!deleteTag}
+        onOpenChange={() => setDeleteTag(null)}
+        title="Hapus Tag"
+        description={
+          <>
+            Yakin ingin menghapus tag <strong>&quot;{deleteTag?.nama}&quot;</strong>? Portfolio yang
+            menggunakan tag ini tidak akan terhapus, hanya relasi tag-nya yang dihapus.
+          </>
+        }
+        confirmText="Hapus"
+        variant="destructive"
+        isLoading={deleteMutation.isPending}
+        onConfirm={() => deleteTag && deleteMutation.mutate(deleteTag.id)}
       />
     </div>
   );
@@ -97,7 +128,17 @@ function TagFormDialog({
 }) {
   const queryClient = useQueryClient();
   const isEdit = !!tag;
-  const [nama, setNama] = useState(tag?.nama || '');
+  const [nama, setNama] = useState('');
+
+  React.useEffect(() => {
+    if (open) {
+      if (tag) {
+        setNama(tag.nama);
+      } else {
+        setNama('');
+      }
+    }
+  }, [tag, open]);
 
   const createMutation = useMutation({
     mutationFn: () => adminTagsApi.createTag({ nama }),
@@ -139,11 +180,26 @@ function TagFormDialog({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit Tag' : 'Tambah Tag'}</DialogTitle>
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-primary/10 p-2">
+              <TagIcon className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <DialogTitle>{isEdit ? 'Edit Tag' : 'Tambah Tag Baru'}</DialogTitle>
+              <DialogDescription>
+                {isEdit
+                  ? 'Ubah nama tag yang sudah ada'
+                  : 'Buat tag baru untuk kategorisasi portfolio'}
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+
+        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div className="space-y-2">
-            <Label htmlFor="nama">Nama Tag</Label>
+            <Label htmlFor="nama">
+              Nama Tag <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="nama"
               value={nama}
@@ -151,14 +207,18 @@ function TagFormDialog({
               placeholder="Contoh: Web Development"
               required
             />
+            <p className="text-xs text-muted-foreground">
+              Gunakan nama yang deskriptif dan mudah dipahami
+            </p>
           </div>
-          <DialogFooter>
+
+          <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
               Batal
             </Button>
             <Button type="submit" disabled={isPending || !nama.trim()}>
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEdit ? 'Simpan' : 'Buat'}
+              {isEdit ? 'Simpan Perubahan' : 'Buat Tag'}
             </Button>
           </DialogFooter>
         </form>
