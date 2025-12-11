@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -21,6 +22,7 @@ import {
   Loader2,
   Edit,
 } from 'lucide-react';
+import { FollowModal } from './follow-modal';
 
 const socialIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   github: Github,
@@ -40,6 +42,7 @@ export function UserProfile({ profile }: UserProfileProps) {
   const { user: currentUser, isAuthenticated } = useAuthStore();
   const queryClient = useQueryClient();
   const isOwner = currentUser?.username === profile.username;
+  const [followModalType, setFollowModalType] = useState<'followers' | 'following' | null>(null);
 
   const followMutation = useMutation({
     mutationFn: () =>
@@ -124,19 +127,33 @@ export function UserProfile({ profile }: UserProfileProps) {
 
         {/* Stats */}
         <div className="mt-5 flex gap-6 text-sm">
-          <Link href={`/${profile.username}/followers`} className="hover:underline">
+          <button
+            onClick={() => setFollowModalType('followers')}
+            className="hover:underline"
+          >
             <span className="font-semibold">{profile.follower_count || 0}</span>{' '}
             <span className="text-muted-foreground">Followers</span>
-          </Link>
-          <Link href={`/${profile.username}/following`} className="hover:underline">
+          </button>
+          <button
+            onClick={() => setFollowModalType('following')}
+            className="hover:underline"
+          >
             <span className="font-semibold">{profile.following_count || 0}</span>{' '}
             <span className="text-muted-foreground">Following</span>
-          </Link>
+          </button>
           <span>
             <span className="font-semibold">{profile.portfolio_count || 0}</span>{' '}
             <span className="text-muted-foreground">Portofolio</span>
           </span>
         </div>
+
+        {/* Follow Modal */}
+        <FollowModal
+          username={profile.username}
+          type={followModalType || 'followers'}
+          open={followModalType !== null}
+          onOpenChange={(open) => !open && setFollowModalType(null)}
+        />
 
         {/* Social Links */}
         {profile.social_links && profile.social_links.length > 0 && (
