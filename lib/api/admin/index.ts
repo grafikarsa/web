@@ -76,7 +76,12 @@ export const adminPortfoliosApi = {
     return response.data;
   },
 
-  updatePortfolio: async (id: string, data: Partial<Portfolio>) => {
+  createPortfolio: async (data: { judul: string; user_id: string; tag_ids?: string[] }) => {
+    const response = await api.post<ApiResponse<Portfolio>>('/portfolios', data);
+    return response.data;
+  },
+
+  updatePortfolio: async (id: string, data: Partial<Portfolio> & { tag_ids?: string[] }) => {
     const response = await api.patch<ApiResponse<Portfolio>>(`/admin/portfolios/${id}`, data);
     return response.data;
   },
@@ -94,6 +99,123 @@ export const adminPortfoliosApi = {
   rejectPortfolio: async (id: string, note: string) => {
     const response = await api.post<ApiResponse<Portfolio>>(`/admin/portfolios/${id}/reject`, { note });
     return response.data;
+  },
+
+  // Content Blocks
+  addBlock: async (portfolioId: string, block: { block_type: string; block_order: number; payload: Record<string, unknown> }) => {
+    const response = await api.post<ApiResponse<{ id: string }>>(`/portfolios/${portfolioId}/blocks`, block);
+    return response.data;
+  },
+
+  updateBlock: async (portfolioId: string, blockId: string, data: { payload?: Record<string, unknown> }) => {
+    const response = await api.patch<ApiResponse<{ id: string }>>(`/portfolios/${portfolioId}/blocks/${blockId}`, data);
+    return response.data;
+  },
+
+  reorderBlocks: async (portfolioId: string, block_orders: Array<{ id: string; order: number }>) => {
+    const response = await api.put<ApiResponse<null>>(`/portfolios/${portfolioId}/blocks/reorder`, { block_orders });
+    return response.data;
+  },
+
+  deleteBlock: async (portfolioId: string, blockId: string) => {
+    const response = await api.delete<ApiResponse<null>>(`/portfolios/${portfolioId}/blocks/${blockId}`);
+    return response.data;
+  },
+};
+
+// Upload API
+export interface PresignResponse {
+  upload_id: string;
+  presigned_url: string;
+  object_key: string;
+  expires_in: number;
+  method: string;
+  headers: Record<string, string>;
+}
+
+export interface ConfirmUploadResponse {
+  type: string;
+  url: string;
+  object_key: string;
+  portfolio_id?: string;
+  block_id?: string;
+}
+
+export const uploadsApi = {
+  presign: async (data: {
+    upload_type: 'avatar' | 'banner' | 'thumbnail' | 'portfolio_image';
+    filename: string;
+    content_type: string;
+    file_size: number;
+    portfolio_id?: string;
+    block_id?: string;
+  }) => {
+    const response = await api.post<ApiResponse<PresignResponse>>('/uploads/presign', data);
+    return response.data;
+  },
+
+  confirm: async (data: { upload_id: string; object_key: string }) => {
+    const response = await api.post<ApiResponse<ConfirmUploadResponse>>('/uploads/confirm', data);
+    return response.data;
+  },
+
+  uploadFile: async (
+    file: File,
+    uploadType: 'avatar' | 'banner' | 'thumbnail' | 'portfolio_image',
+    portfolioId?: string,
+    blockId?: string
+  ): Promise<string> => {
+    // 1. Get presigned URL
+    const presignRes = await uploadsApi.presign({
+      upload_type: uploadType,
+      filename: file.name,
+      content_type: file.type,
+      file_size: file.size,
+      portfolio_id: portfolioId,
+      block_id: blockId,
+    });
+
+    if (!presignRes.data) throw new Error('Failed to get presigned URL');
+
+    const { upload_id, presigned_url, object_key, headers } = presignRes.data;
+
+    // 2. Upload to MinIO (try direct first, fallback to proxy)
+    let uploadRes: Response;
+    try {
+      uploadRes = await fetch(presigned_url, {
+        method: 'PUT',
+        headers: headers,
+        body: file,
+        mode: 'cors',
+      });
+      if (!uploadRes.ok) {
+        throw new Error('Direct upload failed');
+      }
+    } catch {
+      // CORS error or direct upload failed - fallback to proxy
+      console.log('Direct upload failed, using proxy...');
+      uploadRes = await fetch('/api/upload-proxy', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': file.type,
+          'x-presigned-url': presigned_url,
+        },
+        body: file,
+      });
+    }
+
+    if (!uploadRes.ok) {
+      const errorData = await uploadRes.text();
+      console.error('Upload failed:', uploadRes.status, errorData);
+      throw new Error(`Upload to storage failed: ${errorData}`);
+    }
+
+    // 3. Confirm upload
+    const confirmRes = await uploadsApi.confirm({ upload_id, object_key });
+
+    if (!confirmRes.data) throw new Error('Failed to confirm upload');
+
+    return confirmRes.data.url;
   },
 };
 
