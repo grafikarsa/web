@@ -19,6 +19,7 @@ import {
   School,
   Calendar,
   Tags,
+  MessageSquare,
 } from 'lucide-react';
 import api from '@/lib/api/client';
 
@@ -56,6 +57,12 @@ const navSections = [
       { href: '/admin/majors', label: 'Jurusan', icon: GraduationCap, iconColor: 'text-cyan-500' },
       { href: '/admin/classes', label: 'Kelas', icon: School, iconColor: 'text-amber-500' },
       { href: '/admin/academic-years', label: 'Tahun Ajaran', icon: Calendar, iconColor: 'text-rose-500' },
+    ],
+  },
+  {
+    title: 'Lainnya',
+    items: [
+      { href: '/admin/feedback', label: 'Feedback', icon: MessageSquare, iconColor: 'text-teal-500' },
     ],
   },
 ];

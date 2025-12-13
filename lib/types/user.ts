@@ -82,3 +82,11 @@ export interface FollowUser extends UserCard {
   is_following?: boolean;
   followed_at?: string;
 }
+
+// Brief user info for embedded responses
+export interface UserBrief {
+  id: string;
+  nama: string;
+  username: string;
+  avatar_url?: string;
+}

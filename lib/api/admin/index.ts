@@ -345,3 +345,33 @@ export const adminTagsApi = {
     return response.data;
   },
 };
+
+// Admin Feedback API
+import { Feedback, FeedbackStats, UpdateFeedbackRequest } from '@/lib/types';
+
+export const adminFeedbackApi = {
+  getFeedback: async (params?: PaginationParams & { search?: string; kategori?: string; status?: string }) => {
+    const response = await api.get<ApiResponse<Feedback[]>>('/admin/feedback', { params });
+    return response.data;
+  },
+
+  getFeedbackById: async (id: string) => {
+    const response = await api.get<ApiResponse<Feedback>>(`/admin/feedback/${id}`);
+    return response.data;
+  },
+
+  updateFeedback: async (id: string, data: UpdateFeedbackRequest) => {
+    const response = await api.patch<ApiResponse<Feedback>>(`/admin/feedback/${id}`, data);
+    return response.data;
+  },
+
+  deleteFeedback: async (id: string) => {
+    const response = await api.delete<ApiResponse<null>>(`/admin/feedback/${id}`);
+    return response.data;
+  },
+
+  getStats: async () => {
+    const response = await api.get<ApiResponse<FeedbackStats>>('/admin/feedback/stats');
+    return response.data;
+  },
+};
