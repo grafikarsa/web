@@ -1,0 +1,1040 @@
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Plus,
+  Loader2,
+  FileText,
+  Upload,
+  X,
+  GripVertical,
+  Type,
+  ImageIcon,
+  Youtube,
+  Link2,
+  Trash2,
+  Send,
+  Save,
+  Archive,
+  ArchiveRestore,
+  AlertCircle,
+  Eye,
+  ChevronDown,
+  Check,
+  Camera,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Progress } from '@/components/ui/progress';
+import { ConfirmDialog } from '@/components/admin/confirm-dialog';
+import { portfoliosApi, tagsApi } from '@/lib/api';
+import { uploadsApi } from '@/lib/api/admin';
+import { useAuthStore } from '@/lib/stores/auth-store';
+import { Portfolio, Tag, ContentBlockType } from '@/lib/types';
+import { cn } from '@/lib/utils';
+
+// Types
+interface LocalContentBlock {
+  id: string;
+  block_type: ContentBlockType;
+  block_order: number;
+  payload: Record<string, unknown>;
+  isNew?: boolean;
+  pendingFile?: File;
+  pendingPreview?: string;
+}
+
+const blockTypeOptions = [
+  { value: 'text', label: 'Teks', icon: Type, description: 'Paragraf atau deskripsi', iconColor: 'text-blue-500', bgColor: 'bg-blue-100 dark:bg-blue-500/20' },
+  { value: 'image', label: 'Gambar', icon: ImageIcon, description: 'Foto atau ilustrasi', iconColor: 'text-green-500', bgColor: 'bg-green-100 dark:bg-green-500/20' },
+  { value: 'youtube', label: 'Video', icon: Youtube, description: 'Embed YouTube', iconColor: 'text-red-500', bgColor: 'bg-red-100 dark:bg-red-500/20' },
+  { value: 'button', label: 'Tombol', icon: Link2, description: 'Tombol dengan URL', iconColor: 'text-purple-500', bgColor: 'bg-purple-100 dark:bg-purple-500/20' },
+];
+
+const generateId = () => `local-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+
+const statusConfig: Record<string, { label: string; color: string; bgColor: string }> = {
+  draft: { label: 'Draft', color: 'text-gray-600', bgColor: 'bg-gray-100 dark:bg-gray-800' },
+  pending_review: { label: 'Menunggu Review', color: 'text-amber-600', bgColor: 'bg-amber-100 dark:bg-amber-900/30' },
+  published: { label: 'Published', color: 'text-green-600', bgColor: 'bg-green-100 dark:bg-green-900/30' },
+  rejected: { label: 'Ditolak', color: 'text-red-600', bgColor: 'bg-red-100 dark:bg-red-900/30' },
+  archived: { label: 'Diarsipkan', color: 'text-gray-500', bgColor: 'bg-gray-100 dark:bg-gray-800' },
+};
+
+interface PortfolioEditorProps {
+  portfolio?: Portfolio;
+  isEdit?: boolean;
+}
+
+export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorProps) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+  const titleInputRef = useRef<HTMLInputElement>(null);
+
+  // Form state
+  const [judul, setJudul] = useState(portfolio?.judul || '');
+  const [selectedTags, setSelectedTags] = useState<Tag[]>(portfolio?.tags || []);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(portfolio?.thumbnail_url || null);
+  const [contentBlocks, setContentBlocks] = useState<LocalContentBlock[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitProgress, setSubmitProgress] = useState(0);
+  const [submitMessage, setSubmitMessage] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+
+  // Initialize content blocks
+  useEffect(() => {
+    if (portfolio?.content_blocks) {
+      setContentBlocks(
+        portfolio.content_blocks.map((b) => ({
+          ...b,
+          payload: b.payload as unknown as Record<string, unknown>,
+          isNew: false,
+        }))
+      );
+    }
+  }, [portfolio?.content_blocks]);
+
+  // Auto-focus title on mount for new portfolios
+  useEffect(() => {
+    if (!isEdit && titleInputRef.current) {
+      titleInputRef.current.focus();
+    }
+  }, [isEdit]);
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  // Fetch tags
+  const { data: tagsData } = useQuery({
+    queryKey: ['tags'],
+    queryFn: () => tagsApi.getTags(),
+  });
+
+  const tags = tagsData?.data || [];
+
+  const toggleTag = (tag: Tag) => {
+    setSelectedTags((prev) =>
+      prev.some((t) => t.id === tag.id) ? prev.filter((t) => t.id !== tag.id) : [...prev, tag]
+    );
+  };
+
+  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast.error('File harus berupa gambar');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Ukuran file maksimal 5MB');
+        return;
+      }
+      setThumbnailFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setThumbnailPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeThumbnail = () => {
+    setThumbnailFile(null);
+    setThumbnailPreview(null);
+    setThumbnailUrl(null);
+  };
+
+  // Content Block handlers
+  const addBlock = (type: ContentBlockType) => {
+    const newBlock: LocalContentBlock = {
+      id: generateId(),
+      block_type: type,
+      block_order: contentBlocks.length,
+      payload: getDefaultPayload(type),
+      isNew: true,
+    };
+    setContentBlocks([...contentBlocks, newBlock]);
+    // Scroll to new block after a short delay
+    setTimeout(() => {
+      document.getElementById(`block-${newBlock.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  };
+
+  const updateBlock = (id: string, payload: Record<string, unknown>) => {
+    setContentBlocks((prev) => prev.map((b) => (b.id === id ? { ...b, payload } : b)));
+  };
+
+  const updateBlockFile = (id: string, file: File | null, preview: string) => {
+    setContentBlocks((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, pendingFile: file || undefined, pendingPreview: preview || undefined } : b))
+    );
+  };
+
+  const removeBlock = (id: string) => {
+    setContentBlocks((prev) => prev.filter((b) => b.id !== id));
+    toast.success('Block dihapus');
+  };
+
+  const duplicateBlock = (block: LocalContentBlock) => {
+    const newBlock: LocalContentBlock = {
+      ...block,
+      id: generateId(),
+      block_order: contentBlocks.length,
+      isNew: true,
+      pendingFile: undefined,
+      pendingPreview: undefined,
+    };
+    setContentBlocks([...contentBlocks, newBlock]);
+    toast.success('Block diduplikasi');
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveBlockId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveBlockId(null);
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setContentBlocks((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        const newItems = arrayMove(items, oldIndex, newIndex);
+        return newItems.map((item, index) => ({ ...item, block_order: index }));
+      });
+    }
+  };
+
+  const getDefaultPayload = (type: ContentBlockType): Record<string, unknown> => {
+    switch (type) {
+      case 'text': return { content: '' };
+      case 'image': return { url: '', caption: '' };
+      case 'youtube': return { video_id: '', title: '' };
+      case 'button': return { text: '', url: '' };
+      default: return {};
+    }
+  };
+
+  // Save handler
+  const handleSave = async (submitForReview: boolean = false) => {
+    if (!judul.trim()) {
+      toast.error('Judul wajib diisi');
+      titleInputRef.current?.focus();
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitProgress(0);
+
+    try {
+      let portfolioId = portfolio?.id;
+      const totalSteps = 4 + contentBlocks.length;
+      let currentStep = 0;
+
+      const updateProgress = (message: string) => {
+        currentStep++;
+        setSubmitProgress((currentStep / totalSteps) * 100);
+        setSubmitMessage(message);
+      };
+
+      if (isEdit && portfolioId) {
+        // Update existing portfolio
+        updateProgress('Menyimpan informasi...');
+        await portfoliosApi.updatePortfolio(portfolioId, {
+          judul: judul.trim(),
+          tag_ids: selectedTags.map((t) => t.id),
+        });
+      } else {
+        // Create new portfolio
+        updateProgress('Membuat portfolio...');
+        const createRes = await portfoliosApi.createPortfolio({
+          judul: judul.trim(),
+          tag_ids: selectedTags.map((t) => t.id),
+        });
+        if (!createRes.data) throw new Error('Gagal membuat portfolio');
+        portfolioId = createRes.data.id;
+      }
+
+      // Upload thumbnail
+      if (thumbnailFile) {
+        updateProgress('Mengupload thumbnail...');
+        const thumbUrl = await uploadsApi.uploadFile(thumbnailFile, 'thumbnail', portfolioId);
+        await portfoliosApi.updatePortfolio(portfolioId, { thumbnail_url: thumbUrl });
+      } else if (isEdit && thumbnailUrl !== portfolio?.thumbnail_url) {
+        await portfoliosApi.updatePortfolio(portfolioId, { thumbnail_url: thumbnailUrl || undefined });
+      }
+
+      // Delete removed blocks (edit mode only)
+      if (isEdit && portfolio?.content_blocks) {
+        const existingIds = portfolio.content_blocks.map((b) => b.id);
+        const currentIds = contentBlocks.filter((b) => !b.isNew).map((b) => b.id);
+        const deletedIds = existingIds.filter((id) => !currentIds.includes(id));
+        for (const blockId of deletedIds) {
+          await portfoliosApi.deleteBlock(portfolioId, blockId);
+        }
+      }
+
+      // Process content blocks
+      for (let i = 0; i < contentBlocks.length; i++) {
+        const block = contentBlocks[i];
+        let blockPayload = { ...block.payload };
+
+        if (block.block_type === 'image' && block.pendingFile) {
+          updateProgress(`Mengupload gambar ${i + 1}...`);
+          const imageUrl = await uploadsApi.uploadFile(block.pendingFile, 'portfolio_image', portfolioId);
+          blockPayload = { ...blockPayload, url: imageUrl };
+        } else {
+          updateProgress(`Menyimpan konten ${i + 1}...`);
+        }
+
+        if (block.isNew) {
+          await portfoliosApi.addBlock(portfolioId, {
+            block_type: block.block_type,
+            block_order: i,
+            payload: blockPayload,
+          });
+        } else {
+          await portfoliosApi.updateBlock(portfolioId, block.id, { payload: blockPayload });
+        }
+      }
+
+      // Reorder blocks
+      const existingBlocks = contentBlocks.filter((b) => !b.isNew && !b.id.startsWith('local-'));
+      if (existingBlocks.length > 0) {
+        await portfoliosApi.reorderBlocks(
+          portfolioId,
+          existingBlocks.map((b, i) => ({ id: b.id, order: i }))
+        );
+      }
+
+      // Submit for review
+      if (submitForReview) {
+        updateProgress('Mengirim untuk review...');
+        await portfoliosApi.submitPortfolio(portfolioId);
+        toast.success('Portfolio berhasil dikirim untuk review! 🎉');
+      } else {
+        toast.success(isEdit ? 'Perubahan tersimpan!' : 'Draft tersimpan!');
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['portfolio'] });
+      queryClient.invalidateQueries({ queryKey: ['my-portfolios'] });
+
+      if (!isEdit || submitForReview) {
+        router.push(`/${user?.username}`);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Gagal menyimpan portfolio');
+    } finally {
+      setIsSubmitting(false);
+      setSubmitProgress(0);
+      setSubmitMessage('');
+    }
+  };
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: () => portfoliosApi.deletePortfolio(portfolio!.id),
+    onSuccess: () => {
+      toast.success('Portfolio berhasil dihapus');
+      router.push(`/${user?.username}`);
+    },
+    onError: () => toast.error('Gagal menghapus portfolio'),
+  });
+
+  // Archive mutation
+  const archiveMutation = useMutation({
+    mutationFn: () =>
+      portfolio?.status === 'archived'
+        ? portfoliosApi.unarchivePortfolio(portfolio.id)
+        : portfoliosApi.archivePortfolio(portfolio!.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['portfolio'] });
+      toast.success(portfolio?.status === 'archived' ? 'Portfolio diaktifkan kembali' : 'Portfolio diarsipkan');
+    },
+    onError: () => toast.error('Gagal mengubah status'),
+  });
+
+  const displayThumbnail = thumbnailPreview || thumbnailUrl;
+  const canSubmitForReview = !isEdit || portfolio?.status === 'draft' || portfolio?.status === 'rejected';
+  const canDelete = isEdit && portfolio?.status === 'draft';
+  const canArchive = isEdit && (portfolio?.status === 'published' || portfolio?.status === 'archived');
+  const status = portfolio?.status ? statusConfig[portfolio.status] : null;
+  const activeBlock = contentBlocks.find((b) => b.id === activeBlockId);
+
+  return (
+    <TooltipProvider>
+      <div className="relative min-h-screen pb-32">
+        {/* Progress Overlay */}
+        <AnimatePresence>
+          {isSubmitting && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="w-full max-w-sm rounded-2xl border bg-card p-8 shadow-2xl"
+              >
+                <div className="flex flex-col items-center text-center">
+                  <div className="relative mb-4">
+                    <div className="h-16 w-16 rounded-full bg-primary/10" />
+                    <Loader2 className="absolute inset-0 m-auto h-8 w-8 animate-spin text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold">Menyimpan Portfolio</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">{submitMessage}</p>
+                  <Progress value={submitProgress} className="mt-4 h-2 w-full" />
+                  <p className="mt-2 text-xs text-muted-foreground">{Math.round(submitProgress)}%</p>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Admin Review Note */}
+        {portfolio?.admin_review_note && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 flex gap-3 rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-orange-500/10 p-4"
+          >
+            <AlertCircle className="h-5 w-5 shrink-0 text-amber-500" />
+            <div>
+              <p className="text-sm font-medium text-amber-700 dark:text-amber-400">Catatan dari Admin</p>
+              <p className="mt-1 text-sm text-amber-600 dark:text-amber-300">{portfolio.admin_review_note}</p>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Hero Section - Thumbnail */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative mb-8 overflow-hidden rounded-2xl border bg-card shadow-sm"
+        >
+          {displayThumbnail ? (
+            <div className="group relative aspect-[21/9] w-full overflow-hidden">
+              <Image src={displayThumbnail} alt="Thumbnail" fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+              <div className="absolute inset-0 flex items-center justify-center gap-3 bg-black/40 opacity-0 transition-all duration-300 group-hover:opacity-100">
+                <label className="cursor-pointer">
+                  <Button variant="secondary" size="sm" className="shadow-lg" asChild>
+                    <span><Camera className="mr-2 h-4 w-4" />Ganti Thumbnail</span>
+                  </Button>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleThumbnailChange} />
+                </label>
+                <Button variant="destructive" size="sm" className="shadow-lg" onClick={removeThumbnail}>
+                  <Trash2 className="mr-2 h-4 w-4" />Hapus
+                </Button>
+              </div>
+              {/* Status Badge */}
+              {status && (
+                <div className={cn('absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-medium shadow-lg', status.bgColor, status.color)}>
+                  {status.label}
+                </div>
+              )}
+            </div>
+          ) : (
+            <label className="group flex aspect-[21/9] w-full cursor-pointer flex-col items-center justify-center bg-gradient-to-br from-muted/50 to-muted transition-colors hover:from-muted hover:to-muted/80">
+              <div className="flex flex-col items-center">
+                <div className="rounded-full bg-primary/10 p-4 transition-transform group-hover:scale-110">
+                  <ImageIcon className="h-8 w-8 text-primary" />
+                </div>
+                <span className="mt-4 text-sm font-medium">Tambahkan Thumbnail</span>
+                <span className="mt-1 text-xs text-muted-foreground">Gambar utama yang menarik perhatian</span>
+                <span className="mt-2 text-xs text-muted-foreground">PNG, JPG, WebP • Max 5MB</span>
+              </div>
+              <input type="file" accept="image/*" className="hidden" onChange={handleThumbnailChange} />
+            </label>
+          )}
+        </motion.div>
+
+        {/* Title Input */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="mb-6"
+        >
+          <Label htmlFor="judul" className="mb-2 block text-sm font-medium text-muted-foreground">
+            Judul Portfolio
+          </Label>
+          <Input
+            id="judul"
+            ref={titleInputRef}
+            value={judul}
+            onChange={(e) => setJudul(e.target.value)}
+            placeholder="Masukkan judul portfolio..."
+            className="h-14 rounded-xl border-2 bg-muted/30 px-4 text-xl font-semibold transition-colors focus:border-primary focus:bg-background sm:text-2xl"
+          />
+        </motion.div>
+
+        {/* Tags */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="mb-8"
+        >
+          <Label className="mb-2 block text-sm font-medium text-muted-foreground">
+            Tags <span className="font-normal">(pilih kategori yang sesuai)</span>
+          </Label>
+          <div className="flex flex-wrap items-center gap-2">
+            {tags.map((tag) => {
+              const isSelected = selectedTags.some((t) => t.id === tag.id);
+              return (
+                <motion.button
+                  key={tag.id}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => toggleTag(tag)}
+                  className={cn(
+                    'rounded-full px-3 py-1.5 text-sm font-medium transition-all',
+                    isSelected
+                      ? 'bg-primary text-primary-foreground shadow-md'
+                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                  )}
+                >
+                  {tag.nama}
+                  {isSelected && <Check className="ml-1.5 inline h-3 w-3" />}
+                </motion.button>
+              );
+            })}
+            {tags.length === 0 && (
+              <span className="text-sm text-muted-foreground">Tidak ada tags tersedia</span>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Content Blocks */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="space-y-4"
+        >
+          {/* Section Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold">Konten</h2>
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                {contentBlocks.length} block
+              </span>
+            </div>
+          </div>
+
+          {/* Empty State */}
+          {contentBlocks.length === 0 && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="rounded-2xl border-2 border-dashed bg-muted/30 p-12 text-center"
+            >
+              <div className="mx-auto w-fit rounded-full bg-primary/10 p-4">
+                <FileText className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="mt-4 font-semibold">Mulai Berkreasi</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Tambahkan teks, gambar, video, atau link untuk menceritakan karyamu
+              </p>
+              <div className="mt-6 flex flex-wrap justify-center gap-3">
+                {blockTypeOptions.map((opt) => (
+                  <Button
+                    key={opt.value}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addBlock(opt.value as ContentBlockType)}
+                    className="h-10 gap-2 px-4"
+                  >
+                    <div className={cn('rounded-md p-1.5', opt.bgColor)}>
+                      <opt.icon className={cn('h-3.5 w-3.5', opt.iconColor)} />
+                    </div>
+                    {opt.label}
+                  </Button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Content Blocks with DnD */}
+          {contentBlocks.length > 0 && (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext items={contentBlocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-3">
+                  <AnimatePresence mode="popLayout">
+                    {contentBlocks.map((block, index) => (
+                      <ContentBlockEditor
+                        key={block.id}
+                        block={block}
+                        index={index}
+                        onUpdate={(payload) => updateBlock(block.id, payload)}
+                        onUpdateFile={(file, preview) => updateBlockFile(block.id, file, preview)}
+                        onRemove={() => removeBlock(block.id)}
+                        onDuplicate={() => duplicateBlock(block)}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </div>
+              </SortableContext>
+
+              {/* Drag Overlay */}
+              <DragOverlay>
+                {activeBlock && (
+                  <div className="rounded-xl border bg-card p-4 opacity-90 shadow-2xl">
+                    <div className="flex items-center gap-2">
+                      <GripVertical className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium capitalize">{activeBlock.block_type}</span>
+                    </div>
+                  </div>
+                )}
+              </DragOverlay>
+            </DndContext>
+          )}
+
+          {/* Add Block Button */}
+          {contentBlocks.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex justify-center pt-4"
+            >
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="gap-2 rounded-full">
+                    <Plus className="h-4 w-4" />
+                    Tambah Konten
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-2" align="center">
+                  <div className="grid gap-1">
+                    {blockTypeOptions.map((opt) => (
+                      <Button
+                        key={opt.value}
+                        variant="ghost"
+                        className="h-auto justify-start gap-3 px-3 py-2.5"
+                        onClick={() => addBlock(opt.value as ContentBlockType)}
+                      >
+                        <div className={cn('rounded-lg p-2', opt.bgColor)}>
+                          <opt.icon className={cn('h-4 w-4', opt.iconColor)} />
+                        </div>
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium">{opt.label}</span>
+                          <span className="text-xs text-muted-foreground">{opt.description}</span>
+                        </div>
+                      </Button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </motion.div>
+          )}
+        </motion.div>
+
+        {/* Floating Action Bar - centered relative to content area (accounting for 64px sidebar) */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 md:left-[calc(50%+32px)]"
+        >
+          <div className="flex items-center gap-2 rounded-full border bg-card/95 p-2 shadow-2xl backdrop-blur-lg">
+            {/* Delete/Archive Actions */}
+            {(canDelete || canArchive) && (
+              <>
+                {canDelete && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10 rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => setDeleteDialogOpen(true)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Hapus Portfolio</TooltipContent>
+                  </Tooltip>
+                )}
+                {canArchive && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10 rounded-full"
+                        onClick={() => archiveMutation.mutate()}
+                        disabled={archiveMutation.isPending}
+                      >
+                        {archiveMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : portfolio?.status === 'archived' ? (
+                          <ArchiveRestore className="h-4 w-4" />
+                        ) : (
+                          <Archive className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {portfolio?.status === 'archived' ? 'Aktifkan Kembali' : 'Arsipkan'}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                <div className="mx-1 h-6 w-px bg-border" />
+              </>
+            )}
+
+            {/* Preview Button */}
+            {isEdit && portfolio && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 rounded-full"
+                    onClick={() => window.open(`/${user?.username}/${portfolio.slug}`, '_blank')}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Lihat Portfolio</TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* Save Button */}
+            <Button
+              variant="outline"
+              className="h-10 gap-2 rounded-full px-4"
+              onClick={() => handleSave(false)}
+              disabled={isSubmitting}
+            >
+              <Save className="h-4 w-4" />
+              <span className="hidden sm:inline">Simpan Sebagai Draft</span>
+            </Button>
+
+            {/* Submit Button */}
+            {canSubmitForReview && (
+              <Button
+                className="h-10 gap-2 rounded-full px-4 shadow-lg"
+                onClick={() => handleSave(true)}
+                disabled={isSubmitting}
+              >
+                <Send className="h-4 w-4" />
+                <span className="hidden sm:inline">Kirim Review</span>
+              </Button>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Delete Confirmation */}
+        <ConfirmDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          title="Hapus Portfolio"
+          description={<>Yakin ingin menghapus <strong>{portfolio?.judul}</strong>? Tindakan ini tidak dapat dibatalkan.</>}
+          confirmText="Hapus"
+          variant="destructive"
+          isLoading={deleteMutation.isPending}
+          onConfirm={() => deleteMutation.mutate()}
+        />
+      </div>
+    </TooltipProvider>
+  );
+}
+
+
+// Content Block Editor Component
+function ContentBlockEditor({
+  block,
+  index,
+  onUpdate,
+  onUpdateFile,
+  onRemove,
+  onDuplicate,
+}: {
+  block: LocalContentBlock;
+  index: number;
+  onUpdate: (payload: Record<string, unknown>) => void;
+  onUpdateFile: (file: File | null, preview: string) => void;
+  onRemove: () => void;
+  onDuplicate: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const blockTypeInfo = blockTypeOptions.find((o) => o.value === block.block_type);
+  const Icon = blockTypeInfo?.icon || FileText;
+
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast.error('File harus berupa gambar');
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('Ukuran file maksimal 10MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => onUpdateFile(file, reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const displayImageUrl = block.pendingPreview || (block.payload.url as string) || '';
+
+  return (
+    <motion.div
+      id={`block-${block.id}`}
+      ref={setNodeRef}
+      style={style}
+      layout
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: isDragging ? 0.5 : 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className={cn(
+        'group rounded-xl border bg-card transition-shadow',
+        isDragging && 'shadow-2xl ring-2 ring-primary'
+      )}
+    >
+      {/* Block Header */}
+      <div className="flex items-center gap-2 border-b px-3 py-2">
+        <button
+          type="button"
+          className="cursor-grab touch-none rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:cursor-grabbing"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+
+        <div className={cn('rounded-md p-1.5', blockTypeInfo?.bgColor)}>
+          <Icon className={cn('h-3.5 w-3.5', blockTypeInfo?.iconColor)} />
+        </div>
+
+        <span className="text-sm font-medium">{blockTypeInfo?.label}</span>
+        <span className="text-xs text-muted-foreground">#{index + 1}</span>
+
+        <div className="ml-auto flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onDuplicate}>
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Duplikasi</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={onRemove}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Hapus</TooltipContent>
+          </Tooltip>
+
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsExpanded(!isExpanded)}>
+            <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', !isExpanded && '-rotate-90')} />
+          </Button>
+        </div>
+      </div>
+
+      {/* Block Content */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="p-4">
+              {block.block_type === 'text' && (
+                <Textarea
+                  value={(block.payload.content as string) || ''}
+                  onChange={(e) => onUpdate({ content: e.target.value })}
+                  placeholder="Tulis sesuatu yang menarik..."
+                  rows={4}
+                  className="resize-none border-0 bg-transparent p-0 text-base focus-visible:ring-0"
+                />
+              )}
+
+              {block.block_type === 'image' && (
+                <div className="space-y-4">
+                  {displayImageUrl ? (
+                    <div className="group/img relative aspect-video w-full overflow-hidden rounded-lg bg-muted">
+                      <Image src={displayImageUrl} alt="Preview" fill className="object-contain" />
+                      <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 transition-opacity group-hover/img:opacity-100">
+                        <label className="cursor-pointer">
+                          <Button variant="secondary" size="sm" asChild>
+                            <span><Camera className="mr-1.5 h-4 w-4" />Ganti</span>
+                          </Button>
+                          <input type="file" accept="image/*" className="hidden" onChange={handleImageFileChange} />
+                        </label>
+                        <Button variant="destructive" size="sm" onClick={() => { onUpdate({ ...block.payload, url: '' }); onUpdateFile(null, ''); }}>
+                          <Trash2 className="mr-1.5 h-4 w-4" />Hapus
+                        </Button>
+                      </div>
+                      {block.pendingFile && (
+                        <div className="absolute bottom-2 left-2 rounded-full bg-amber-500 px-2 py-1 text-xs text-white">
+                          Akan diupload
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <label className="flex aspect-video w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed bg-muted/30 transition-colors hover:bg-muted/50">
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <span className="mt-2 text-sm font-medium">Upload Gambar</span>
+                      <span className="text-xs text-muted-foreground">PNG, JPG, GIF • Max 10MB</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={handleImageFileChange} />
+                    </label>
+                  )}
+                  <div className="space-y-2">
+                    <Input
+                      value={(block.payload.url as string) || ''}
+                      onChange={(e) => onUpdate({ ...block.payload, url: e.target.value })}
+                      placeholder="Atau masukkan URL gambar..."
+                      className="text-sm"
+                      disabled={!!block.pendingFile}
+                    />
+                    <Input
+                      value={(block.payload.caption as string) || ''}
+                      onChange={(e) => onUpdate({ ...block.payload, caption: e.target.value })}
+                      placeholder="Caption (opsional)"
+                      className="text-sm"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {block.block_type === 'youtube' && (() => {
+                const extractVideoId = (input: string): string => {
+                  if (!input) return '';
+                  if (/^[a-zA-Z0-9_-]{11}$/.test(input)) return input;
+                  const patterns = [
+                    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+                    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+                  ];
+                  for (const pattern of patterns) {
+                    const match = input.match(pattern);
+                    if (match) return match[1];
+                  }
+                  return input;
+                };
+
+                const videoId = (block.payload.video_id as string) || '';
+
+                return (
+                  <div className="space-y-4">
+                    <Input
+                      value={videoId}
+                      onChange={(e) => onUpdate({ ...block.payload, video_id: extractVideoId(e.target.value.trim()) })}
+                      placeholder="Paste link YouTube atau video ID..."
+                      className="text-sm"
+                    />
+                    {videoId && (
+                      <div className="aspect-video w-full overflow-hidden rounded-lg">
+                        <iframe
+                          src={`https://www.youtube.com/embed/${videoId}`}
+                          className="h-full w-full"
+                          allowFullScreen
+                        />
+                      </div>
+                    )}
+                    <Input
+                      value={(block.payload.title as string) || ''}
+                      onChange={(e) => onUpdate({ ...block.payload, title: e.target.value })}
+                      placeholder="Judul video (opsional)"
+                      className="text-sm"
+                    />
+                  </div>
+                );
+              })()}
+
+              {block.block_type === 'button' && (
+                <div className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Input
+                      value={(block.payload.text as string) || ''}
+                      onChange={(e) => onUpdate({ ...block.payload, text: e.target.value })}
+                      placeholder="Teks tombol"
+                    />
+                    <Input
+                      value={(block.payload.url as string) || ''}
+                      onChange={(e) => onUpdate({ ...block.payload, url: e.target.value })}
+                      placeholder="https://..."
+                    />
+                  </div>
+                  {block.payload.text && block.payload.url && (
+                    <div className="flex justify-center rounded-lg bg-muted/50 p-4">
+                      <Button variant="default" asChild>
+                        <a href={block.payload.url as string} target="_blank" rel="noopener noreferrer">
+                          {block.payload.text as string}
+                        </a>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}

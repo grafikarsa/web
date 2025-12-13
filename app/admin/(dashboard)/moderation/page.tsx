@@ -38,7 +38,7 @@ export default function ModerationPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-moderation'],
-    queryFn: () => adminPortfoliosApi.getPortfolios({ status: 'pending_review', limit: 50 }),
+    queryFn: () => adminPortfoliosApi.getPortfolios({ status: 'pending_review', limit: 100 }),
   });
 
   const { data: detailData, isLoading: detailLoading } = useQuery({
@@ -52,6 +52,8 @@ export default function ModerationPage() {
       adminPortfoliosApi.approvePortfolio(id, note),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-moderation'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-sidebar-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-dashboard-stats'] });
       toast.success('Portfolio berhasil disetujui');
       closeReviewDialog();
       setSelectedPortfolio(null);
@@ -66,6 +68,8 @@ export default function ModerationPage() {
       adminPortfoliosApi.rejectPortfolio(id, note),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-moderation'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-sidebar-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-dashboard-stats'] });
       toast.success('Portfolio berhasil ditolak');
       closeReviewDialog();
       setSelectedPortfolio(null);
@@ -76,6 +80,7 @@ export default function ModerationPage() {
   });
 
   const portfolios = data?.data || [];
+  const totalPending = (data?.meta as { total_count?: number })?.total_count ?? portfolios.length;
 
   const openReviewDialog = (id: string, action: ReviewAction) => {
     setPortfolioToReview(id);
@@ -127,20 +132,14 @@ export default function ModerationPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Moderasi Portfolio</h1>
-          <p className="text-sm text-muted-foreground">
-            Review dan setujui portfolio yang diajukan siswa
-          </p>
-        </div>
+      {/* Header Badge */}
+      <div className="flex justify-end">
         <Badge
-          variant={portfolios.length > 0 ? 'default' : 'secondary'}
+          variant={totalPending > 0 ? 'default' : 'secondary'}
           className="w-fit gap-1.5 px-3 py-1.5"
         >
           <Clock className="h-3.5 w-3.5" />
-          {portfolios.length} menunggu review
+          {totalPending} menunggu review
         </Badge>
       </div>
 

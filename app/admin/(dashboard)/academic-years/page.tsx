@@ -125,14 +125,8 @@ export default function AdminAcademicYearsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Kelola Tahun Ajaran</h1>
-          <p className="text-sm text-muted-foreground">
-            Kelola tahun ajaran dan jadwal kenaikan kelas otomatis
-          </p>
-        </div>
+      {/* Action Button */}
+      <div className="flex justify-end">
         <Button onClick={() => setIsCreateOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Tambah Tahun Ajaran

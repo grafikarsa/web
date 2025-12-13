@@ -36,6 +36,12 @@ import {
   ImageIcon,
   Youtube,
   Link2,
+  MoreVertical,
+  CheckCircle,
+  Clock,
+  XCircle,
+  Archive,
+  FileEdit,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -69,6 +75,13 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { adminPortfoliosApi, adminUsersApi, adminTagsApi, uploadsApi } from '@/lib/api/admin';
 import { portfoliosApi } from '@/lib/api';
@@ -105,12 +118,13 @@ const statusOptions = [
   { value: 'archived', label: 'Archived' },
 ];
 
-const statusVariants: Record<PortfolioStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  draft: 'secondary',
-  pending_review: 'outline',
-  published: 'default',
-  rejected: 'destructive',
-  archived: 'secondary',
+// Custom status styles with specific colors
+const statusStyles: Record<PortfolioStatus, string> = {
+  draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+  pending_review: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+  published: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  rejected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  archived: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
 };
 
 const blockTypeOptions = [
@@ -164,6 +178,17 @@ export default function AdminPortfoliosPage() {
     onError: () => toast.error('Gagal menghapus portfolio'),
   });
 
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: PortfolioStatus }) =>
+      adminPortfoliosApi.updatePortfolio(id, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-portfolios'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-dashboard-stats'] });
+      toast.success('Status portfolio berhasil diubah');
+    },
+    onError: () => toast.error('Gagal mengubah status portfolio'),
+  });
+
   const portfolios = data?.data || [];
   const pagination = (data as { pagination?: { total_pages: number } })?.pagination;
 
@@ -185,18 +210,8 @@ export default function AdminPortfoliosPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Kelola Portfolio</h1>
-          <p className="text-sm text-muted-foreground">Kelola semua portfolio siswa dan alumni</p>
-        </div>
-        <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Buat Portfolio
-        </Button>
-      </div>
-
-      <div className="flex flex-col gap-4 sm:flex-row">
+      {/* Filters & Actions */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -218,6 +233,10 @@ export default function AdminPortfoliosPage() {
             ))}
           </SelectContent>
         </Select>
+        <Button onClick={() => setShowCreateModal(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Buat Portfolio
+        </Button>
       </div>
 
       {portfolios.length === 0 ? (
@@ -245,6 +264,8 @@ export default function AdminPortfoliosPage() {
                   setShowEditModal(true);
                 }}
                 onDelete={() => setDeleteTarget(portfolio)}
+                onStatusChange={(newStatus) => updateStatusMutation.mutate({ id: portfolio.id, status: newStatus as PortfolioStatus })}
+                isUpdatingStatus={updateStatusMutation.isPending}
               />
             ))}
           </div>
@@ -310,17 +331,30 @@ export default function AdminPortfoliosPage() {
 }
 
 
+// Status change options with icons
+const statusChangeOptions = [
+  { value: 'draft', label: 'Draft', icon: FileEdit, color: 'text-gray-500' },
+  { value: 'pending_review', label: 'Pending Review', icon: Clock, color: 'text-yellow-500' },
+  { value: 'published', label: 'Published', icon: CheckCircle, color: 'text-green-500' },
+  { value: 'rejected', label: 'Rejected', icon: XCircle, color: 'text-red-500' },
+  { value: 'archived', label: 'Archived', icon: Archive, color: 'text-gray-400' },
+];
+
 // Portfolio Card Item Component
 function PortfolioCardItem({
   portfolio,
   onPreview,
   onEdit,
   onDelete,
+  onStatusChange,
+  isUpdatingStatus,
 }: {
   portfolio: PortfolioCard;
   onPreview: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onStatusChange: (status: string) => void;
+  isUpdatingStatus: boolean;
 }) {
   const firstTag = portfolio.tags?.[0];
   const displayDate = portfolio.published_at || portfolio.created_at;
@@ -334,11 +368,6 @@ function PortfolioCardItem({
           ) : (
             <div className="flex h-full items-center justify-center text-muted-foreground">No Image</div>
           )}
-          {portfolio.status && portfolio.status !== 'published' && (
-            <Badge variant={statusVariants[portfolio.status]} className="absolute right-2 top-2 capitalize">
-              {portfolio.status.replace('_', ' ')}
-            </Badge>
-          )}
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
             <Button variant="secondary" size="sm" onClick={onPreview}>
               <Eye className="mr-2 h-4 w-4" />
@@ -347,11 +376,50 @@ function PortfolioCardItem({
           </div>
         </div>
 
-        {firstTag && (
-          <Badge variant="secondary" className="mt-3 rounded-full px-2.5 py-0.5 text-xs font-normal">
-            {firstTag.nama}
-          </Badge>
-        )}
+        {/* Status badge with dropdown - moved outside image area */}
+        <div className="mt-3 flex items-center justify-between gap-2">
+          {firstTag ? (
+            <Badge variant="secondary" className="rounded-full px-2.5 py-0.5 text-xs font-normal">
+              {firstTag.nama}
+            </Badge>
+          ) : (
+            <div />
+          )}
+          {portfolio.status && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium capitalize transition-opacity ${statusStyles[portfolio.status]} hover:opacity-80`}>
+                  {isUpdatingStatus ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : null}
+                  {portfolio.status.replace('_', ' ')}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                  Ubah Status
+                </div>
+                <DropdownMenuSeparator />
+                {statusChangeOptions.map((opt) => {
+                  const Icon = opt.icon;
+                  const isActive = portfolio.status === opt.value;
+                  return (
+                    <DropdownMenuItem
+                      key={opt.value}
+                      onClick={() => !isActive && onStatusChange(opt.value)}
+                      disabled={isActive || isUpdatingStatus}
+                      className={isActive ? 'bg-muted' : ''}
+                    >
+                      <Icon className={`mr-2 h-4 w-4 ${opt.color}`} />
+                      {opt.label}
+                      {isActive && <CheckCircle className="ml-auto h-3 w-3 text-green-500" />}
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
 
         <h3 className="mt-2 line-clamp-2 font-semibold leading-tight">{portfolio.judul}</h3>
 
@@ -402,19 +470,21 @@ function PreviewDialog({
       <DialogContent className="flex max-h-[95vh] w-full max-w-4xl flex-col gap-0 overflow-hidden p-0">
         <div className="border-b bg-background px-4 py-4 sm:px-6">
           <DialogTitle className="line-clamp-2 text-lg font-semibold">{portfolio.judul}</DialogTitle>
-          <DialogDescription className="mt-1 flex flex-wrap items-center gap-2 text-sm">
-            <div className="flex items-center gap-1.5">
-              <Avatar className="h-5 w-5">
-                <AvatarImage src={portfolio.user?.avatar_url} />
-                <AvatarFallback className="text-[10px]">{portfolio.user?.nama?.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <span className="font-medium text-foreground">{portfolio.user?.nama}</span>
+          <DialogDescription asChild>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <Avatar className="h-5 w-5">
+                  <AvatarImage src={portfolio.user?.avatar_url} />
+                  <AvatarFallback className="text-[10px]">{portfolio.user?.nama?.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <span className="font-medium text-foreground">{portfolio.user?.nama}</span>
+              </span>
+              {portfolio.status && (
+                <Badge className={`text-xs capitalize ${statusStyles[portfolio.status]}`}>
+                  {portfolio.status.replace('_', ' ')}
+                </Badge>
+              )}
             </div>
-            {portfolio.status && (
-              <Badge variant={statusVariants[portfolio.status]} className="text-xs capitalize">
-                {portfolio.status.replace('_', ' ')}
-              </Badge>
-            )}
           </DialogDescription>
         </div>
 
@@ -473,6 +543,7 @@ function PortfolioFormModal({
 
   // Form state
   const [judul, setJudul] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState<PortfolioStatus>('draft');
   const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
@@ -522,6 +593,7 @@ function PortfolioFormModal({
   // Reset form
   const resetForm = useCallback(() => {
     setJudul('');
+    setSelectedStatus('draft');
     setSelectedUser(null);
     setSelectedTags([]);
     setThumbnailFile(null);
@@ -537,6 +609,7 @@ function PortfolioFormModal({
   useEffect(() => {
     if (open && isEdit && portfolio) {
       setJudul(portfolio.judul);
+      setSelectedStatus(portfolio.status || 'draft');
       setSelectedTags(portfolio.tags || []);
       setThumbnailUrl(portfolio.thumbnail_url || null);
       if (detailData?.data?.content_blocks) {
@@ -661,6 +734,7 @@ function PortfolioFormModal({
         setSubmitProgress('Memperbarui portfolio...');
         await adminPortfoliosApi.updatePortfolio(portfolioId, {
           judul: judul.trim(),
+          status: selectedStatus,
           tag_ids: selectedTags.map((t) => t.id),
         });
       } else {
@@ -672,6 +746,10 @@ function PortfolioFormModal({
         });
         if (!createRes.data) throw new Error('Gagal membuat portfolio');
         portfolioId = createRes.data.id;
+        // Set status after creation if not draft
+        if (selectedStatus !== 'draft') {
+          await adminPortfoliosApi.updatePortfolio(portfolioId, { status: selectedStatus });
+        }
       }
 
       // Step 2: Upload thumbnail if new file
@@ -804,17 +882,43 @@ function PortfolioFormModal({
               )}
             </div>
 
-            {/* Judul */}
-            <div className="space-y-2">
-              <Label htmlFor="judul" className="text-sm font-medium">
-                Judul Portfolio <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="judul"
-                value={judul}
-                onChange={(e) => setJudul(e.target.value)}
-                placeholder="Masukkan judul portfolio"
-              />
+            {/* Judul & Status */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="judul" className="text-sm font-medium">
+                  Judul Portfolio <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="judul"
+                  value={judul}
+                  onChange={(e) => setJudul(e.target.value)}
+                  placeholder="Masukkan judul portfolio"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Status</Label>
+                <Select
+                  value={selectedStatus}
+                  onValueChange={(v) => setSelectedStatus(v as PortfolioStatus)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusChangeOptions.map((opt) => {
+                      const Icon = opt.icon;
+                      return (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          <div className="flex items-center gap-2">
+                            <Icon className={`h-4 w-4 ${opt.color}`} />
+                            {opt.label}
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* User Selection (only for create) */}
@@ -1101,104 +1205,158 @@ function SortableContentBlockEditor({
           />
         )}
 
-        {block.block_type === 'image' && (
-          <div className="space-y-3">
-            {/* Image Upload or URL */}
-            <div className="space-y-2">
-              <Label className="text-xs font-medium">Gambar</Label>
-              {displayImageUrl ? (
-                <div className="group relative aspect-video w-full overflow-hidden rounded-lg border bg-muted">
-                  <Image
-                    src={displayImageUrl}
-                    alt="Preview"
-                    fill
-                    className="object-contain"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-                    <label className="cursor-pointer">
-                      <Button type="button" variant="secondary" size="sm" asChild>
-                        <span><Upload className="mr-1.5 h-4 w-4" />Ganti</span>
-                      </Button>
-                      <input type="file" accept="image/*" className="hidden" onChange={handleImageFileChange} />
-                    </label>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => {
-                        onUpdate({ ...block.payload, url: '' });
-                        onUpdateFile(null, '');
+        {block.block_type === 'image' && (() => {
+          const urlValue = ((block.payload.url as string) || '').trim();
+          const hasUrlInput = !!urlValue;
+          const hasPendingFile = !!block.pendingFile || !!block.pendingPreview;
+          const isUploadDisabled = hasUrlInput && !hasPendingFile;
+          const isUrlDisabled = hasPendingFile;
+
+          return (
+            <div className="space-y-3">
+              {/* Image Preview - shows for both uploaded and URL images */}
+              {displayImageUrl && (
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium">Preview Gambar</Label>
+                  <div className="group relative aspect-video w-full overflow-hidden rounded-lg border bg-muted">
+                    <Image
+                      src={displayImageUrl}
+                      alt="Preview"
+                      fill
+                      className="object-contain"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        target.parentElement?.classList.add('preview-error');
                       }}
-                    >
-                      <Trash2 className="mr-1.5 h-4 w-4" />Hapus
-                    </Button>
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                      {!isUploadDisabled && (
+                        <label className="cursor-pointer">
+                          <Button type="button" variant="secondary" size="sm" asChild>
+                            <span><Upload className="mr-1.5 h-4 w-4" />Ganti</span>
+                          </Button>
+                          <input type="file" accept="image/*" className="hidden" onChange={handleImageFileChange} />
+                        </label>
+                      )}
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          onUpdate({ ...block.payload, url: '' });
+                          onUpdateFile(null, '');
+                        }}
+                      >
+                        <Trash2 className="mr-1.5 h-4 w-4" />Hapus
+                      </Button>
+                    </div>
                   </div>
+                  {hasPendingFile && (
+                    <p className="text-xs text-amber-600">Gambar akan diupload saat menyimpan</p>
+                  )}
                 </div>
-              ) : (
-                <label className="flex aspect-video w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed bg-muted/30 hover:bg-muted/50">
-                  <Upload className="h-8 w-8 text-muted-foreground" />
-                  <span className="mt-2 text-sm">Klik untuk upload gambar</span>
-                  <span className="text-xs text-muted-foreground">PNG, JPG, GIF, max 10MB</span>
-                  <input type="file" accept="image/*" className="hidden" onChange={handleImageFileChange} />
-                </label>
               )}
-            </div>
 
-            {/* URL Input (alternative) */}
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Atau masukkan URL gambar</Label>
-              <Input
-                value={(block.payload.url as string) || ''}
-                onChange={(e) => onUpdate({ ...block.payload, url: e.target.value })}
-                placeholder="https://example.com/image.jpg"
-                className="text-sm"
-              />
-            </div>
+              {/* Image Upload - only show when no image */}
+              {!displayImageUrl && (
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium">Upload Gambar</Label>
+                  <label className={`flex aspect-video w-full flex-col items-center justify-center rounded-lg border-2 border-dashed ${isUploadDisabled ? 'cursor-not-allowed bg-muted/20 opacity-50' : 'cursor-pointer bg-muted/30 hover:bg-muted/50'}`}>
+                    <Upload className="h-8 w-8 text-muted-foreground" />
+                    <span className="mt-2 text-sm">{isUploadDisabled ? 'Hapus URL untuk upload' : 'Klik untuk upload gambar'}</span>
+                    <span className="text-xs text-muted-foreground">PNG, JPG, GIF, max 10MB</span>
+                    <input type="file" accept="image/*" className="hidden" onChange={handleImageFileChange} disabled={isUploadDisabled} />
+                  </label>
+                </div>
+              )}
 
-            {/* Caption */}
-            <div>
-              <Label className="text-xs">Caption (opsional)</Label>
-              <Input
-                value={(block.payload.caption as string) || ''}
-                onChange={(e) => onUpdate({ ...block.payload, caption: e.target.value })}
-                placeholder="Deskripsi gambar"
-              />
-            </div>
-          </div>
-        )}
+              {/* URL Input (alternative) */}
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Atau masukkan URL gambar</Label>
+                <Input
+                  value={(block.payload.url as string) || ''}
+                  onChange={(e) => onUpdate({ ...block.payload, url: e.target.value })}
+                  placeholder="https://example.com/image.jpg"
+                  className="text-sm"
+                  disabled={isUrlDisabled}
+                />
+                {isUrlDisabled && (
+                  <p className="text-xs text-muted-foreground">Hapus gambar yang diupload untuk menggunakan URL</p>
+                )}
+              </div>
 
-        {block.block_type === 'youtube' && (
-          <div className="space-y-3">
-            <div>
-              <Label className="text-xs">Video ID YouTube</Label>
-              <Input
-                value={(block.payload.video_id as string) || ''}
-                onChange={(e) => onUpdate({ ...block.payload, video_id: e.target.value })}
-                placeholder="dQw4w9WgXcQ (dari URL youtube.com/watch?v=dQw4w9WgXcQ)"
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Judul (opsional)</Label>
-              <Input
-                value={(block.payload.title as string) || ''}
-                onChange={(e) => onUpdate({ ...block.payload, title: e.target.value })}
-                placeholder="Judul video"
-              />
-            </div>
-            {typeof block.payload.video_id === 'string' && block.payload.video_id && (
-              <div className="aspect-video w-full overflow-hidden rounded-lg border">
-                <iframe
-                  src={`https://www.youtube.com/embed/${block.payload.video_id}`}
-                  className="h-full w-full"
-                  allowFullScreen
+              {/* Caption */}
+              <div>
+                <Label className="text-xs">Caption (opsional)</Label>
+                <Input
+                  value={(block.payload.caption as string) || ''}
+                  onChange={(e) => onUpdate({ ...block.payload, caption: e.target.value })}
+                  placeholder="Deskripsi gambar"
                 />
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          );
+        })()}
+
+        {block.block_type === 'youtube' && (() => {
+          // Extract video ID from URL or use as-is if already an ID
+          const extractVideoId = (input: string): string => {
+            if (!input) return '';
+            // Already a video ID (11 chars, alphanumeric with - and _)
+            if (/^[a-zA-Z0-9_-]{11}$/.test(input)) return input;
+            // YouTube URL patterns
+            const patterns = [
+              /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+              /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+            ];
+            for (const pattern of patterns) {
+              const match = input.match(pattern);
+              if (match) return match[1];
+            }
+            return input; // Return as-is if no match
+          };
+
+          const handleYoutubeInput = (value: string) => {
+            const videoId = extractVideoId(value.trim());
+            onUpdate({ ...block.payload, video_id: videoId });
+          };
+
+          const videoId = (block.payload.video_id as string) || '';
+
+          return (
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs">Link atau Video ID YouTube</Label>
+                <Input
+                  value={videoId}
+                  onChange={(e) => handleYoutubeInput(e.target.value)}
+                  placeholder="https://youtube.com/watch?v=xxx atau video ID"
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Bisa paste link YouTube langsung atau video ID saja
+                </p>
+              </div>
+              <div>
+                <Label className="text-xs">Judul (opsional)</Label>
+                <Input
+                  value={(block.payload.title as string) || ''}
+                  onChange={(e) => onUpdate({ ...block.payload, title: e.target.value })}
+                  placeholder="Judul video"
+                />
+              </div>
+              {videoId && (
+                <div className="aspect-video w-full overflow-hidden rounded-lg border">
+                  <iframe
+                    src={`https://www.youtube.com/embed/${videoId}`}
+                    className="h-full w-full"
+                    allowFullScreen
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {block.block_type === 'button' && (
           <div className="space-y-3">

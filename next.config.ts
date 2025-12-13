@@ -11,12 +11,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "i.pravatar.cc",
       },
-      {
-        protocol: "http",
-        hostname: "localhost",
-        port: "9000",
-      },
     ],
+    // Skip image optimization for local development
+    // This allows loading images from localhost:9000 (MinIO)
+    unoptimized: process.env.NODE_ENV === "development",
   },
 };
 

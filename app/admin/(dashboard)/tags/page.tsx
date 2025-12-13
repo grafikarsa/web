@@ -63,14 +63,8 @@ export default function AdminTagsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Kelola Tags</h1>
-          <p className="text-sm text-muted-foreground">
-            Kelola tag untuk kategorisasi portfolio siswa
-          </p>
-        </div>
+      {/* Action Button */}
+      <div className="flex justify-end">
         <Button onClick={() => setIsCreateOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Tambah Tag

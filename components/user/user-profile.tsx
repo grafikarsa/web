@@ -60,8 +60,8 @@ export function UserProfile({ profile }: UserProfileProps) {
 
   return (
     <div>
-      {/* Banner - Full width */}
-      <div className="relative h-48 w-full bg-gradient-to-r from-primary/20 to-primary/10 md:h-56">
+      {/* Banner - Full width, edge-to-edge */}
+      <div className="-mx-6 -mt-6 relative h-48 w-[calc(100%+3rem)] bg-gradient-to-r from-primary/20 to-primary/10 md:h-56">
         {profile.banner_url && (
           <Image src={profile.banner_url} alt="Banner" fill className="object-cover" />
         )}

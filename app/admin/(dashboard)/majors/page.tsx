@@ -64,14 +64,8 @@ export default function AdminMajorsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Kelola Jurusan</h1>
-          <p className="text-sm text-muted-foreground">
-            Kelola data jurusan/kompetensi keahlian yang tersedia
-          </p>
-        </div>
+      {/* Action Button */}
+      <div className="flex justify-end">
         <Button onClick={() => setIsCreateOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Tambah Jurusan

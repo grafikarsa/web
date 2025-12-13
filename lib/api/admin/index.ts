@@ -33,7 +33,7 @@ export interface AcademicYear {
 
 // Admin Users API
 export const adminUsersApi = {
-  getUsers: async (params?: PaginationParams & { search?: string; role?: string }) => {
+  getUsers: async (params?: PaginationParams & { search?: string; role?: string; is_active?: boolean; kelas_id?: string; jurusan_id?: string }) => {
     const response = await api.get<ApiResponse<User[]>>('/admin/users', { params });
     return response.data;
   },
@@ -58,8 +58,38 @@ export const adminUsersApi = {
     return response.data;
   },
 
-  toggleActive: async (id: string) => {
-    const response = await api.post<ApiResponse<User>>(`/admin/users/${id}/toggle-active`);
+  toggleActive: async (id: string, currentlyActive: boolean) => {
+    const endpoint = currentlyActive ? 'deactivate' : 'activate';
+    const response = await api.post<ApiResponse<User>>(`/admin/users/${id}/${endpoint}`);
+    return response.data;
+  },
+
+  activate: async (id: string) => {
+    const response = await api.post<ApiResponse<null>>(`/admin/users/${id}/activate`);
+    return response.data;
+  },
+
+  deactivate: async (id: string) => {
+    const response = await api.post<ApiResponse<null>>(`/admin/users/${id}/deactivate`);
+    return response.data;
+  },
+
+  resetPassword: async (id: string, newPassword: string) => {
+    const response = await api.patch<ApiResponse<null>>(`/admin/users/${id}/password`, { new_password: newPassword });
+    return response.data;
+  },
+
+  checkUsername: async (username: string, excludeId?: string) => {
+    const params: Record<string, string> = { username };
+    if (excludeId) params.exclude_id = excludeId;
+    const response = await api.get<ApiResponse<{ username: string; available: boolean }>>('/admin/users/check-username', { params });
+    return response.data;
+  },
+
+  checkEmail: async (email: string, excludeId?: string) => {
+    const params: Record<string, string> = { email };
+    if (excludeId) params.exclude_id = excludeId;
+    const response = await api.get<ApiResponse<{ email: string; available: boolean }>>('/admin/users/check-email', { params });
     return response.data;
   },
 };

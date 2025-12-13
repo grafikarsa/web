@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { AdminSidebar } from '@/components/layout/admin-sidebar';
+import { AdminHeader } from '@/components/layout/admin-header';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
@@ -38,7 +39,8 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
   return (
     <div className="flex min-h-screen">
       <AdminSidebar />
-      <div className="flex flex-1 flex-col pl-64">
+      <div className="flex flex-1 flex-col pl-56">
+        <AdminHeader />
         <main className="flex-1 p-6">{children}</main>
       </div>
     </div>
