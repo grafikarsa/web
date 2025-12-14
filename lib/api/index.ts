@@ -6,3 +6,4 @@ export { portfoliosApi, tagsApi } from './portfolios';
 export { feedApi } from './feed';
 export { publicApi } from './public';
 export { feedbackApi } from './feedback';
+export { notificationsApi } from './notifications';

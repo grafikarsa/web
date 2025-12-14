@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useThemeValue } from '@/lib/hooks/use-theme-value';
 import { ThemeToggle } from './theme-toggle';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 
 const pageTitles: Record<string, string> = {
   '/': 'Feed',
@@ -59,6 +60,7 @@ export function StudentHeader() {
       </Link>
 
       <div className="flex items-center gap-2">
+        <NotificationBell />
         <ThemeToggle />
         <Button
           variant="ghost"
