@@ -33,6 +33,7 @@ import {
   ImageIcon,
   Youtube,
   Link2,
+  Table as TableIcon,
   Trash2,
   Send,
   Save,
@@ -69,6 +70,7 @@ const blockTypeOptions = [
   { value: 'text', label: 'Teks', icon: Type, description: 'Paragraf teks atau HTML' },
   { value: 'image', label: 'Gambar', icon: ImageIcon, description: 'Upload atau URL gambar' },
   { value: 'youtube', label: 'YouTube', icon: Youtube, description: 'Embed video YouTube' },
+  { value: 'table', label: 'Tabel', icon: TableIcon, description: 'Tabel data' },
   { value: 'button', label: 'Tombol/Link', icon: Link2, description: 'Tombol dengan link' },
 ];
 

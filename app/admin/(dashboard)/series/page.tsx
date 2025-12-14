@@ -7,16 +7,15 @@ import {
   Plus,
   Loader2,
   Layers,
-  GripVertical,
   Trash2,
   FileText,
   Image,
   Youtube,
   Table,
   Link,
-  Code,
   Eye,
   ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -39,18 +38,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { DataTable, Column } from '@/components/admin/data-table';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
-import { adminSeriesApi, CreateSeriesBlockRequest } from '@/lib/api/admin';
-import { Series, ContentBlockType } from '@/lib/types';
+import { adminSeriesApi } from '@/lib/api/admin';
+import { Series, SeriesDetail, ContentBlockType } from '@/lib/types';
 import { useDebounce } from '@/lib/hooks/use-debounce';
 
 const BLOCK_TYPES: { value: ContentBlockType; label: string; icon: React.ReactNode; description: string }[] = [
@@ -59,7 +52,6 @@ const BLOCK_TYPES: { value: ContentBlockType; label: string; icon: React.ReactNo
   { value: 'youtube', label: 'YouTube', icon: <Youtube className="h-4 w-4" />, description: 'Video YouTube' },
   { value: 'table', label: 'Table', icon: <Table className="h-4 w-4" />, description: 'Tabel data' },
   { value: 'button', label: 'Button', icon: <Link className="h-4 w-4" />, description: 'Tombol link' },
-  { value: 'embed', label: 'Embed', icon: <Code className="h-4 w-4" />, description: 'Embed HTML' },
 ];
 
 function getBlockIcon(type: ContentBlockType) {
@@ -78,7 +70,7 @@ export default function AdminSeriesPage() {
   const [editSeriesId, setEditSeriesId] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deleteSeries, setDeleteSeries] = useState<Series | null>(null);
-  const [previewSeries, setPreviewSeries] = useState<Series | null>(null);
+  const [previewSeriesId, setPreviewSeriesId] = useState<string | null>(null);
   const debouncedSearch = useDebounce(search, 300);
 
   const { data, isLoading } = useQuery({
@@ -112,131 +104,95 @@ export default function AdminSeriesPage() {
 
   const series = data?.data || [];
 
+  const columns: Column<Series>[] = [
+    {
+      key: 'nama',
+      header: 'Nama Series',
+      render: (s) => (
+        <div className="flex items-center gap-3">
+          <div className="rounded-lg bg-primary/10 p-2">
+            <Layers className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <p className="font-medium">{s.nama}</p>
+            {s.deskripsi && (
+              <p className="text-xs text-muted-foreground line-clamp-1 max-w-[300px]">
+                {s.deskripsi}
+              </p>
+            )}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'block_count',
+      header: 'Blocks',
+      render: (s) => (
+        <Badge variant="outline" className="gap-1">
+          <Layers className="h-3 w-3" />
+          {s.block_count || 0}
+        </Badge>
+      ),
+    },
+    {
+      key: 'portfolio_count',
+      header: 'Portfolios',
+      render: (s) => <span className="text-muted-foreground">{s.portfolio_count || 0}</span>,
+    },
+    {
+      key: 'is_active',
+      header: 'Status',
+      render: (s) => (
+        <div className="flex items-center gap-2">
+          <Switch
+            checked={s.is_active}
+            onCheckedChange={(checked) =>
+              toggleActiveMutation.mutate({ id: s.id, is_active: checked })
+            }
+          />
+          <Badge variant={s.is_active ? 'default' : 'secondary'}>
+            {s.is_active ? 'Aktif' : 'Nonaktif'}
+          </Badge>
+        </div>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      render: (s) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            setPreviewSeriesId(s.id);
+          }}
+        >
+          <Eye className="h-4 w-4 mr-1" />
+          Preview
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Series Template</h1>
-          <p className="text-muted-foreground">
-            Kelola template series untuk struktur portofolio
-          </p>
-        </div>
+      <div className="flex justify-end">
         <Button onClick={() => setIsCreateOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Tambah Series
         </Button>
       </div>
 
-      <div className="flex items-center gap-4">
-        <Input
-          placeholder="Cari series..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-sm"
-        />
-      </div>
-
-      {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      ) : series.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Layers className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">Belum ada series template</p>
-            <Button variant="outline" className="mt-4" onClick={() => setIsCreateOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Buat Series Pertama
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4">
-          {series.map((s) => (
-            <Card key={s.id} className="overflow-hidden">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-primary/10 p-2">
-                      <Layers className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">{s.nama}</CardTitle>
-                      {s.deskripsi && (
-                        <CardDescription className="mt-1 line-clamp-2">
-                          {s.deskripsi}
-                        </CardDescription>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={s.is_active}
-                      onCheckedChange={(checked) =>
-                        toggleActiveMutation.mutate({ id: s.id, is_active: checked })
-                      }
-                    />
-                    <Badge variant={s.is_active ? 'default' : 'secondary'}>
-                      {s.is_active ? 'Aktif' : 'Nonaktif'}
-                    </Badge>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-                  <span className="flex items-center gap-1">
-                    <Layers className="h-4 w-4" />
-                    {s.block_count || 0} blocks
-                  </span>
-                  <span>•</span>
-                  <span>{s.portfolio_count || 0} portfolios</span>
-                </div>
-
-                {s.blocks && s.blocks.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {s.blocks.slice(0, 5).map((block, idx) => (
-                      <Badge key={idx} variant="outline" className="gap-1">
-                        {getBlockIcon(block.block_type)}
-                        {getBlockLabel(block.block_type)}
-                      </Badge>
-                    ))}
-                    {s.blocks.length > 5 && (
-                      <Badge variant="outline">+{s.blocks.length - 5} more</Badge>
-                    )}
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPreviewSeries(s)}
-                  >
-                    <Eye className="mr-2 h-4 w-4" />
-                    Preview
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setEditSeriesId(s.id)}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => setDeleteSeries(s)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      <DataTable
+        data={series}
+        columns={columns}
+        isLoading={isLoading}
+        searchPlaceholder="Cari series..."
+        onSearch={setSearch}
+        onEdit={(s) => setEditSeriesId(s.id)}
+        onDelete={setDeleteSeries}
+      />
 
       <SeriesFormDialog
         seriesId={editSeriesId}
@@ -248,9 +204,9 @@ export default function AdminSeriesPage() {
       />
 
       <SeriesPreviewDialog
-        series={previewSeries}
-        open={!!previewSeries}
-        onClose={() => setPreviewSeries(null)}
+        seriesId={previewSeriesId}
+        open={!!previewSeriesId}
+        onClose={() => setPreviewSeriesId(null)}
       />
 
       <ConfirmDialog
@@ -277,7 +233,6 @@ export default function AdminSeriesPage() {
   );
 }
 
-
 interface BlockItem {
   id: string;
   block_type: ContentBlockType;
@@ -299,35 +254,40 @@ function SeriesFormDialog({
   const [deskripsi, setDeskripsi] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [blocks, setBlocks] = useState<BlockItem[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Fetch series detail for edit
   const { data: seriesData, isLoading: isLoadingDetail } = useQuery({
     queryKey: ['admin-series-detail', seriesId],
     queryFn: () => adminSeriesApi.getSeriesById(seriesId!),
     enabled: !!seriesId && open,
   });
 
+  // Reset form when dialog opens/closes or when switching between create/edit
   React.useEffect(() => {
     if (open) {
-      if (seriesData?.data) {
+      if (seriesId && seriesData?.data) {
         const s = seriesData.data;
         setNama(s.nama);
         setDeskripsi(s.deskripsi || '');
         setIsActive(s.is_active);
         setBlocks(
-          s.blocks.map((b, idx) => ({
+          (s.blocks || []).map((b, idx) => ({
             id: `block-${idx}-${Date.now()}`,
             block_type: b.block_type,
             instruksi: b.instruksi,
           }))
         );
+        setIsInitialized(true);
       } else if (!seriesId) {
-        // Reset for create
+        // Reset for create mode
         setNama('');
         setDeskripsi('');
         setIsActive(true);
         setBlocks([]);
+        setIsInitialized(true);
       }
+    } else {
+      setIsInitialized(false);
     }
   }, [seriesData, seriesId, open]);
 
@@ -419,10 +379,11 @@ function SeriesFormDialog({
   };
 
   const isPending = createMutation.isPending || updateMutation.isPending;
+  const showLoading = isEdit && (isLoadingDetail || !isInitialized);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="rounded-full bg-primary/10 p-2">
@@ -441,167 +402,163 @@ function SeriesFormDialog({
           </div>
         </DialogHeader>
 
-        {isLoadingDetail && isEdit ? (
+        {showLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-            <ScrollArea className="flex-1 pr-4">
-              <div className="space-y-6 pb-4">
-                {/* Basic Info */}
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="nama">
-                      Nama Series <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="nama"
-                      value={nama}
-                      onChange={(e) => setNama(e.target.value)}
-                      placeholder="Contoh: PJBL Semester 1 2024"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="deskripsi">Deskripsi</Label>
-                    <Textarea
-                      id="deskripsi"
-                      value={deskripsi}
-                      onChange={(e) => setDeskripsi(e.target.value)}
-                      placeholder="Deskripsi singkat tentang series ini..."
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between rounded-lg border p-4">
-                    <div>
-                      <Label>Status Aktif</Label>
-                      <p className="text-xs text-muted-foreground">
-                        Series aktif akan ditampilkan ke siswa
-                      </p>
-                    </div>
-                    <Switch checked={isActive} onCheckedChange={setIsActive} />
-                  </div>
+          <form onSubmit={handleSubmit}>
+            <div className="max-h-[60vh] overflow-y-auto pr-2 space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="nama">
+                    Nama Series <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="nama"
+                    value={nama}
+                    onChange={(e) => setNama(e.target.value)}
+                    placeholder="Contoh: PJBL Semester 1 2024"
+                    required
+                  />
                 </div>
 
-                <Separator />
+                <div className="space-y-2">
+                  <Label htmlFor="deskripsi">Deskripsi</Label>
+                  <Textarea
+                    id="deskripsi"
+                    value={deskripsi}
+                    onChange={(e) => setDeskripsi(e.target.value)}
+                    placeholder="Deskripsi singkat tentang series ini..."
+                    rows={3}
+                  />
+                </div>
 
-                {/* Blocks Builder */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label>Template Blocks <span className="text-destructive">*</span></Label>
-                      <p className="text-xs text-muted-foreground">
-                        Tentukan struktur block konten untuk portofolio
-                      </p>
-                    </div>
-                    <Button type="button" variant="outline" size="sm" onClick={addBlock}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Tambah Block
-                    </Button>
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <div>
+                    <Label>Status Aktif</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Series aktif akan ditampilkan ke siswa
+                    </p>
                   </div>
-
-                  {blocks.length === 0 ? (
-                    <Card className="border-dashed">
-                      <CardContent className="flex flex-col items-center justify-center py-8">
-                        <Layers className="h-8 w-8 text-muted-foreground mb-2" />
-                        <p className="text-sm text-muted-foreground">
-                          Belum ada block. Klik &quot;Tambah Block&quot; untuk memulai.
-                        </p>
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <div className="space-y-3">
-                      {blocks.map((block, index) => (
-                        <Card key={block.id} className="relative">
-                          <CardContent className="pt-4 pb-4">
-                            <div className="flex gap-3">
-                              <div className="flex flex-col items-center gap-1">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6"
-                                  disabled={index === 0}
-                                  onClick={() => moveBlock(index, 'up')}
-                                >
-                                  <ChevronDown className="h-4 w-4 rotate-180" />
-                                </Button>
-                                <div className="flex items-center justify-center h-6 w-6 rounded bg-muted text-xs font-medium">
-                                  {index + 1}
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6"
-                                  disabled={index === blocks.length - 1}
-                                  onClick={() => moveBlock(index, 'down')}
-                                >
-                                  <ChevronDown className="h-4 w-4" />
-                                </Button>
-                              </div>
-
-                              <div className="flex-1 space-y-3">
-                                <div className="flex items-center gap-2">
-                                  <Select
-                                    value={block.block_type}
-                                    onValueChange={(v) =>
-                                      updateBlock(block.id, { block_type: v as ContentBlockType })
-                                    }
-                                  >
-                                    <SelectTrigger className="w-[160px]">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {BLOCK_TYPES.map((type) => (
-                                        <SelectItem key={type.value} value={type.value}>
-                                          <div className="flex items-center gap-2">
-                                            {type.icon}
-                                            <span>{type.label}</span>
-                                          </div>
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-destructive hover:text-destructive ml-auto"
-                                    onClick={() => removeBlock(block.id)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-
-                                <div className="space-y-1">
-                                  <Label className="text-xs">Instruksi untuk siswa</Label>
-                                  <Textarea
-                                    value={block.instruksi}
-                                    onChange={(e) =>
-                                      updateBlock(block.id, { instruksi: e.target.value })
-                                    }
-                                    placeholder="Contoh: Masukkan judul dan deskripsi singkat proyek..."
-                                    rows={2}
-                                    className="text-sm"
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
+                  <Switch checked={isActive} onCheckedChange={setIsActive} />
                 </div>
               </div>
-            </ScrollArea>
 
-            <DialogFooter className="pt-4 border-t mt-4">
+              <Separator />
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Template Blocks <span className="text-destructive">*</span></Label>
+                    <p className="text-xs text-muted-foreground">
+                      Tentukan struktur block konten untuk portofolio
+                    </p>
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={addBlock}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Tambah Block
+                  </Button>
+                </div>
+
+                {blocks.length === 0 ? (
+                  <Card className="border-dashed">
+                    <CardContent className="flex flex-col items-center justify-center py-8">
+                      <Layers className="h-8 w-8 text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground">
+                        Belum ada block. Klik &quot;Tambah Block&quot; untuk memulai.
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-3">
+                    {blocks.map((block, index) => (
+                      <Card key={block.id} className="relative">
+                        <CardContent className="pt-4 pb-4">
+                          <div className="flex gap-3">
+                            <div className="flex flex-col items-center gap-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                disabled={index === 0}
+                                onClick={() => moveBlock(index, 'up')}
+                              >
+                                <ChevronUp className="h-4 w-4" />
+                              </Button>
+                              <div className="flex items-center justify-center h-6 w-6 rounded bg-muted text-xs font-medium">
+                                {index + 1}
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                disabled={index === blocks.length - 1}
+                                onClick={() => moveBlock(index, 'down')}
+                              >
+                                <ChevronDown className="h-4 w-4" />
+                              </Button>
+                            </div>
+
+                            <div className="flex-1 space-y-3">
+                              <div className="flex items-center gap-2">
+                                <Select
+                                  value={block.block_type}
+                                  onValueChange={(v) =>
+                                    updateBlock(block.id, { block_type: v as ContentBlockType })
+                                  }
+                                >
+                                  <SelectTrigger className="w-[160px]">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {BLOCK_TYPES.map((type) => (
+                                      <SelectItem key={type.value} value={type.value}>
+                                        <div className="flex items-center gap-2">
+                                          {type.icon}
+                                          <span>{type.label}</span>
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive hover:text-destructive ml-auto"
+                                  onClick={() => removeBlock(block.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+
+                              <div className="space-y-1">
+                                <Label className="text-xs">Instruksi untuk siswa</Label>
+                                <Textarea
+                                  value={block.instruksi}
+                                  onChange={(e) =>
+                                    updateBlock(block.id, { instruksi: e.target.value })
+                                  }
+                                  placeholder="Contoh: Masukkan judul dan deskripsi singkat proyek..."
+                                  rows={2}
+                                  className="text-sm"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter className="mt-6">
               <Button type="button" variant="outline" onClick={onClose}>
                 Batal
               </Button>
@@ -618,15 +575,21 @@ function SeriesFormDialog({
 }
 
 function SeriesPreviewDialog({
-  series,
+  seriesId,
   open,
   onClose,
 }: {
-  series: Series | null;
+  seriesId: string | null;
   open: boolean;
   onClose: () => void;
 }) {
-  if (!series) return null;
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin-series-detail', seriesId],
+    queryFn: () => adminSeriesApi.getSeriesById(seriesId!),
+    enabled: !!seriesId && open,
+  });
+
+  const series = data?.data;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -634,25 +597,33 @@ function SeriesPreviewDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Eye className="h-5 w-5" />
-            Preview: {series.nama}
+            Preview Template
           </DialogTitle>
           <DialogDescription>
             Tampilan template blocks yang akan dilihat siswa
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[60vh]">
-          <div className="space-y-4 pr-4">
-            {series.deskripsi && (
-              <div className="rounded-lg bg-muted p-4">
-                <p className="text-sm">{series.deskripsi}</p>
-              </div>
-            )}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : series ? (
+          <div className="max-h-[60vh] overflow-y-auto pr-2 space-y-4">
+            <div>
+              <h3 className="font-semibold text-lg">{series.nama}</h3>
+              {series.deskripsi && (
+                <p className="text-sm text-muted-foreground mt-1">{series.deskripsi}</p>
+              )}
+            </div>
+
+            <Separator />
 
             {series.blocks && series.blocks.length > 0 ? (
               <div className="space-y-3">
+                <p className="text-sm font-medium">Template Blocks ({series.blocks.length})</p>
                 {series.blocks.map((block, index) => (
-                  <Card key={index}>
+                  <Card key={block.id || index}>
                     <CardContent className="pt-4 pb-4">
                       <div className="flex items-start gap-3">
                         <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10 text-primary shrink-0">
@@ -680,7 +651,11 @@ function SeriesPreviewDialog({
               </p>
             )}
           </div>
-        </ScrollArea>
+        ) : (
+          <p className="text-sm text-muted-foreground text-center py-8">
+            Series tidak ditemukan
+          </p>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>

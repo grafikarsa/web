@@ -42,6 +42,8 @@ import {
   XCircle,
   Archive,
   FileEdit,
+  Table as TableIcon,
+  Code,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';

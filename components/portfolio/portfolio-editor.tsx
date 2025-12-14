@@ -46,6 +46,7 @@ import {
   ChevronDown,
   Check,
   Camera,
+  Table as TableIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -79,6 +80,7 @@ const blockTypeOptions = [
   { value: 'text', label: 'Teks', icon: Type, description: 'Paragraf atau deskripsi', iconColor: 'text-blue-500', bgColor: 'bg-blue-100 dark:bg-blue-500/20' },
   { value: 'image', label: 'Gambar', icon: ImageIcon, description: 'Foto atau ilustrasi', iconColor: 'text-green-500', bgColor: 'bg-green-100 dark:bg-green-500/20' },
   { value: 'youtube', label: 'Video', icon: Youtube, description: 'Embed YouTube', iconColor: 'text-red-500', bgColor: 'bg-red-100 dark:bg-red-500/20' },
+  { value: 'table', label: 'Tabel', icon: TableIcon, description: 'Tabel data', iconColor: 'text-orange-500', bgColor: 'bg-orange-100 dark:bg-orange-500/20' },
   { value: 'button', label: 'Tombol', icon: Link2, description: 'Tombol dengan URL', iconColor: 'text-purple-500', bgColor: 'bg-purple-100 dark:bg-purple-500/20' },
 ];
 
@@ -166,10 +168,10 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
     const activeSeries = seriesData?.data || [];
     const portfolioSeries = portfolio?.series;
 
-    // Create a map of active series by ID
-    const seriesMap = new Map(activeSeries.map((s) => [s.id, s]));
+    // Create a map of active series by ID - mark all as active since they come from active list
+    const seriesMap = new Map(activeSeries.map((s) => [s.id, { ...s, is_active: true }]));
 
-    // Add portfolio's series if not in active list (inactive series)
+    // Add portfolio's series if not in active list (this means it's inactive)
     if (portfolioSeries && !seriesMap.has(portfolioSeries.id)) {
       seriesMap.set(portfolioSeries.id, { ...portfolioSeries, is_active: false } as Series);
     }
@@ -642,25 +644,28 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
           <div className="flex flex-wrap items-center gap-2">
             {seriesList.map((s) => {
               const isSelected = selectedSeries?.id === s.id;
-              const isInactive = !s.is_active;
+              const isInactive = s.is_active === false; // Explicitly check for false
               const hasBlocks = s.blocks && s.blocks.length > 0;
+              // Inactive series can only be deselected, not selected
+              const canSelect = !isInactive || isSelected;
               return (
                 <motion.button
                   key={s.id}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => handleSeriesSelect(isSelected ? null : s)}
+                  whileHover={canSelect ? { scale: 1.05 } : undefined}
+                  whileTap={canSelect ? { scale: 0.95 } : undefined}
+                  onClick={() => canSelect && handleSeriesSelect(isSelected ? null : s)}
+                  disabled={!canSelect}
                   className={cn(
                     'rounded-full px-3 py-1.5 text-sm font-medium transition-all',
                     isSelected
                       ? isInactive
-                        ? 'bg-blue-400/70 text-white shadow-md'
+                        ? 'bg-gray-400 text-white shadow-md'
                         : 'bg-blue-500 text-white shadow-md'
                       : isInactive
-                        ? 'bg-muted/50 text-muted-foreground/70 hover:bg-muted/60'
+                        ? 'bg-muted/30 text-muted-foreground/50 cursor-not-allowed'
                         : 'bg-muted text-muted-foreground hover:bg-muted/80'
                   )}
-                  title={isInactive ? 'Series ini sudah tidak aktif' : hasBlocks ? `${s.blocks?.length} blocks template` : undefined}
+                  title={isInactive ? 'Series ini sudah tidak aktif - tidak dapat dipilih' : hasBlocks ? `${s.blocks?.length} blocks template` : undefined}
                 >
                   {s.nama}
                   {hasBlocks && <span className="ml-1 text-xs opacity-70">({s.blocks?.length})</span>}
@@ -1206,6 +1211,157 @@ function ContentBlockEditor({
                           {block.payload.text as string}
                         </a>
                       </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {block.block_type === 'table' && (() => {
+                const headers = (block.payload.headers as string[]) || ['Kolom 1', 'Kolom 2'];
+                const rows = (block.payload.rows as string[][]) || [['', '']];
+
+                const updateHeaders = (newHeaders: string[]) => {
+                  onUpdate({ ...block.payload, headers: newHeaders });
+                };
+
+                const updateRows = (newRows: string[][]) => {
+                  onUpdate({ ...block.payload, rows: newRows });
+                };
+
+                const addColumn = () => {
+                  const newHeaders = [...headers, `Kolom ${headers.length + 1}`];
+                  const newRows = rows.map(row => [...row, '']);
+                  onUpdate({ headers: newHeaders, rows: newRows });
+                };
+
+                const removeColumn = (colIndex: number) => {
+                  if (headers.length <= 1) return;
+                  const newHeaders = headers.filter((_, i) => i !== colIndex);
+                  const newRows = rows.map(row => row.filter((_, i) => i !== colIndex));
+                  onUpdate({ headers: newHeaders, rows: newRows });
+                };
+
+                const addRow = () => {
+                  const newRow = headers.map(() => '');
+                  updateRows([...rows, newRow]);
+                };
+
+                const removeRow = (rowIndex: number) => {
+                  if (rows.length <= 1) return;
+                  updateRows(rows.filter((_, i) => i !== rowIndex));
+                };
+
+                const updateCell = (rowIndex: number, colIndex: number, value: string) => {
+                  const newRows = rows.map((row, ri) =>
+                    ri === rowIndex ? row.map((cell, ci) => (ci === colIndex ? value : cell)) : row
+                  );
+                  updateRows(newRows);
+                };
+
+                const updateHeader = (colIndex: number, value: string) => {
+                  const newHeaders = headers.map((h, i) => (i === colIndex ? value : h));
+                  updateHeaders(newHeaders);
+                };
+
+                return (
+                  <div className="space-y-4">
+                    <div className="flex gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={addColumn}>
+                        <Plus className="h-4 w-4 mr-1" />
+                        Kolom
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" onClick={addRow}>
+                        <Plus className="h-4 w-4 mr-1" />
+                        Baris
+                      </Button>
+                    </div>
+                    <div className="overflow-x-auto rounded-lg border">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted/50">
+                          <tr>
+                            {headers.map((header, colIndex) => (
+                              <th key={colIndex} className="border-b p-2">
+                                <div className="flex items-center gap-1">
+                                  <Input
+                                    value={header}
+                                    onChange={(e) => updateHeader(colIndex, e.target.value)}
+                                    className="h-8 text-sm font-medium"
+                                    placeholder={`Kolom ${colIndex + 1}`}
+                                  />
+                                  {headers.length > 1 && (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6 shrink-0"
+                                      onClick={() => removeColumn(colIndex)}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </th>
+                            ))}
+                            <th className="w-10 border-b p-2"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rows.map((row, rowIndex) => (
+                            <tr key={rowIndex}>
+                              {row.map((cell, colIndex) => (
+                                <td key={colIndex} className="border-b p-2">
+                                  <Input
+                                    value={cell}
+                                    onChange={(e) => updateCell(rowIndex, colIndex, e.target.value)}
+                                    className="h-8 text-sm"
+                                    placeholder="..."
+                                  />
+                                </td>
+                              ))}
+                              <td className="border-b p-2">
+                                {rows.length > 1 && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={() => removeRow(rowIndex)}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {block.block_type === 'embed' && (
+                <div className="space-y-4">
+                  <Textarea
+                    value={(block.payload.html as string) || ''}
+                    onChange={(e) => onUpdate({ ...block.payload, html: e.target.value })}
+                    placeholder="Paste kode embed HTML/iframe di sini..."
+                    rows={4}
+                    className="font-mono text-sm"
+                  />
+                  <Input
+                    value={(block.payload.title as string) || ''}
+                    onChange={(e) => onUpdate({ ...block.payload, title: e.target.value })}
+                    placeholder="Judul embed (opsional)"
+                    className="text-sm"
+                  />
+                  {block.payload.html && (
+                    <div className="rounded-lg border bg-muted/30 p-4">
+                      <p className="text-xs text-muted-foreground mb-2">Preview:</p>
+                      <div
+                        className="overflow-hidden rounded"
+                        dangerouslySetInnerHTML={{ __html: block.payload.html as string }}
+                      />
                     </div>
                   )}
                 </div>
