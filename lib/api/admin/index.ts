@@ -111,7 +111,7 @@ export const adminPortfoliosApi = {
     return response.data;
   },
 
-  updatePortfolio: async (id: string, data: Partial<Portfolio> & { tag_ids?: string[]; series_ids?: string[] }) => {
+  updatePortfolio: async (id: string, data: Partial<Portfolio> & { tag_ids?: string[]; series_id?: string }) => {
     const response = await api.patch<ApiResponse<Portfolio>>(`/admin/portfolios/${id}`, data);
     return response.data;
   },
@@ -347,7 +347,26 @@ export const adminTagsApi = {
 };
 
 // Admin Series API
-import { Series } from '@/lib/types';
+import { Series, SeriesDetail, SeriesBlock, ContentBlockType } from '@/lib/types';
+
+export interface CreateSeriesBlockRequest {
+  block_type: ContentBlockType;
+  instruksi: string;
+}
+
+export interface CreateSeriesRequest {
+  nama: string;
+  deskripsi?: string;
+  is_active?: boolean;
+  blocks: CreateSeriesBlockRequest[];
+}
+
+export interface UpdateSeriesRequest {
+  nama?: string;
+  deskripsi?: string;
+  is_active?: boolean;
+  blocks?: CreateSeriesBlockRequest[];
+}
 
 export const adminSeriesApi = {
   getSeries: async (params?: PaginationParams & { search?: string }) => {
@@ -355,13 +374,18 @@ export const adminSeriesApi = {
     return response.data;
   },
 
-  createSeries: async (data: { nama: string; is_active?: boolean }) => {
-    const response = await api.post<ApiResponse<Series>>('/admin/series', data);
+  getSeriesById: async (id: string) => {
+    const response = await api.get<ApiResponse<SeriesDetail>>(`/admin/series/${id}`);
     return response.data;
   },
 
-  updateSeries: async (id: string, data: { nama?: string; is_active?: boolean }) => {
-    const response = await api.patch<ApiResponse<Series>>(`/admin/series/${id}`, data);
+  createSeries: async (data: CreateSeriesRequest) => {
+    const response = await api.post<ApiResponse<SeriesDetail>>('/admin/series', data);
+    return response.data;
+  },
+
+  updateSeries: async (id: string, data: UpdateSeriesRequest) => {
+    const response = await api.patch<ApiResponse<SeriesDetail>>(`/admin/series/${id}`, data);
     return response.data;
   },
 

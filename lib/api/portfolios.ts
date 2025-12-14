@@ -7,6 +7,7 @@ interface PortfoliosParams extends PaginationParams {
   jurusan_id?: string;
   kelas_id?: string;
   user_id?: string;
+  series_id?: string;
   status?: string;
   sort?: string;
 }
@@ -14,14 +15,14 @@ interface PortfoliosParams extends PaginationParams {
 interface CreatePortfolioRequest {
   judul: string;
   tag_ids?: string[];
-  series_ids?: string[];
+  series_id?: string;
 }
 
 interface UpdatePortfolioRequest {
   judul?: string;
   thumbnail_url?: string;
   tag_ids?: string[];
-  series_ids?: string[];
+  series_id?: string;
 }
 
 interface LikeResponse {

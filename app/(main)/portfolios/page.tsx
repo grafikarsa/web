@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { portfoliosApi, tagsApi, publicApi } from '@/lib/api';
+import { seriesApi } from '@/lib/api/public';
 import { PortfolioCard } from '@/components/portfolio/portfolio-card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -47,6 +48,7 @@ export default function PortfoliosPage() {
   const searchQuery = searchParams.get('search') || '';
   const jurusanKode = searchParams.get('jurusan') || 'all';
   const kelasNama = searchParams.get('kelas') || 'all';
+  const seriesId = searchParams.get('series') || 'all';
   const sortBy = searchParams.get('sort') || '-published_at';
   const page = parseInt(searchParams.get('page') || '1', 10);
   const tagParam = searchParams.get('tags') || '';
@@ -77,9 +79,16 @@ export default function PortfoliosPage() {
     queryFn: () => publicApi.getKelas(),
   });
 
+  // Fetch series for filter
+  const { data: seriesData } = useQuery({
+    queryKey: ['series'],
+    queryFn: () => seriesApi.getSeries(),
+  });
+
   const tags = tagsData?.data || [];
   const jurusanList = jurusanData?.data || [];
   const kelasList = kelasData?.data || [];
+  const seriesList = seriesData?.data || [];
 
   // Find jurusan ID from kode for API call
   const selectedJurusan = useMemo(() => {
@@ -141,15 +150,19 @@ export default function PortfoliosPage() {
     updateParams({ tags: newTags.length > 0 ? newTags.join(',') : null });
   };
 
+  // Get selected series ID for API call
+  const selectedSeriesId = seriesId === 'all' ? undefined : seriesId === 'none' ? 'none' : seriesId;
+
   // Fetch portfolios with filters and pagination
   const { data, isLoading, error } = useQuery({
-    queryKey: ['portfolios', searchQuery, selectedJurusan?.id, selectedKelas?.id, selectedTags, sortBy, page],
+    queryKey: ['portfolios', searchQuery, selectedJurusan?.id, selectedKelas?.id, selectedTags, selectedSeriesId, sortBy, page],
     queryFn: () =>
       portfoliosApi.getPortfolios({
         search: searchQuery || undefined,
         jurusan_id: selectedJurusan?.id || undefined,
         kelas_id: selectedKelas?.id || undefined,
         tag_ids: selectedTags.length > 0 ? selectedTags.join(',') : undefined,
+        series_id: selectedSeriesId,
         sort: sortBy,
         page,
         limit: ITEMS_PER_PAGE,
@@ -161,7 +174,7 @@ export default function PortfoliosPage() {
   const meta = data?.meta;
 
   const hasActiveFilters =
-    searchQuery || jurusanKode !== 'all' || kelasNama !== 'all' || selectedTags.length > 0;
+    searchQuery || jurusanKode !== 'all' || kelasNama !== 'all' || seriesId !== 'all' || selectedTags.length > 0;
 
   const clearFilters = () => {
     setSearchInput('');
@@ -226,6 +239,21 @@ export default function PortfoliosPage() {
             {filteredKelasList.map((k) => (
               <SelectItem key={k.id} value={k.nama}>
                 {k.nama}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={seriesId} onValueChange={(v) => updateParams({ series: v === 'all' ? null : v })}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Series" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua Series</SelectItem>
+            <SelectItem value="none">Tanpa Series</SelectItem>
+            {seriesList.map((s) => (
+              <SelectItem key={s.id} value={s.id}>
+                {s.nama}
               </SelectItem>
             ))}
           </SelectContent>

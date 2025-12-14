@@ -34,9 +34,16 @@ export const publicApi = {
   },
 };
 
+import { SeriesDetail } from '@/lib/types';
+
 export const seriesApi = {
   getSeries: async (): Promise<ApiResponse<Series[]>> => {
     const response = await api.get<ApiResponse<Series[]>>('/series');
+    return response.data;
+  },
+
+  getSeriesById: async (id: string): Promise<ApiResponse<SeriesDetail>> => {
+    const response = await api.get<ApiResponse<SeriesDetail>>(`/series/${id}`);
     return response.data;
   },
 };

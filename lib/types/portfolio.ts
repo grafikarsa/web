@@ -8,11 +8,26 @@ export interface Tag {
   nama: string;
 }
 
+export interface SeriesBlock {
+  id: string;
+  block_type: ContentBlockType;
+  block_order: number;
+  instruksi: string;
+}
+
 export interface Series {
   id: string;
   nama: string;
+  deskripsi?: string;
   is_active: boolean;
+  block_count?: number;
+  portfolio_count?: number;
+  blocks?: SeriesBlock[];
   created_at: string;
+}
+
+export interface SeriesDetail extends Series {
+  blocks: SeriesBlock[];
 }
 
 export interface ContentBlock {
@@ -61,6 +76,11 @@ export interface EmbedBlockPayload {
   title?: string;
 }
 
+export interface PortfolioSeries {
+  id: string;
+  nama: string;
+}
+
 export interface Portfolio {
   id: string;
   user_id: string;
@@ -78,7 +98,7 @@ export interface Portfolio {
   is_liked?: boolean;
   user?: UserCard & { kelas_nama?: string };
   tags?: Tag[];
-  series?: Series[];
+  series?: PortfolioSeries | null;
   content_blocks?: ContentBlock[];
 }
 
@@ -94,6 +114,6 @@ export interface PortfolioCard {
   like_count?: number;
   user?: UserCard & { kelas_nama?: string };
   tags?: Tag[];
-  series?: Series[];
+  series?: PortfolioSeries | null;
   admin_review_note?: string;
 }

@@ -181,13 +181,11 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
           )}
 
           {/* Series */}
-          {portfolio.series && portfolio.series.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {portfolio.series.map((s) => (
-                <Badge key={s.id} className="bg-blue-500 font-normal text-white hover:bg-blue-600">
-                  {s.nama}
-                </Badge>
-              ))}
+          {portfolio.series && (
+            <div className="mt-3">
+              <Badge className="bg-blue-500 font-normal text-white hover:bg-blue-600">
+                {portfolio.series.nama}
+              </Badge>
             </div>
           )}
         </header>

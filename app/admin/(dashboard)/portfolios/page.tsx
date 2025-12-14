@@ -547,7 +547,7 @@ function PortfolioFormModal({
   const [selectedStatus, setSelectedStatus] = useState<PortfolioStatus>('draft');
   const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
-  const [selectedSeries, setSelectedSeries] = useState<Series[]>([]);
+  const [selectedSeries, setSelectedSeries] = useState<Series | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
@@ -605,7 +605,7 @@ function PortfolioFormModal({
     setSelectedStatus('draft');
     setSelectedUser(null);
     setSelectedTags([]);
-    setSelectedSeries([]);
+    setSelectedSeries(null);
     setThumbnailFile(null);
     setThumbnailPreview(null);
     setThumbnailUrl(null);
@@ -621,7 +621,8 @@ function PortfolioFormModal({
       setJudul(portfolio.judul);
       setSelectedStatus(portfolio.status || 'draft');
       setSelectedTags(portfolio.tags || []);
-      setSelectedSeries(portfolio.series || []);
+      // Convert PortfolioSeries to Series format for the form
+      setSelectedSeries(portfolio.series ? { ...portfolio.series, is_active: true, created_at: '' } as Series : null);
       setThumbnailUrl(portfolio.thumbnail_url || null);
       if (detailData?.data?.content_blocks) {
         setContentBlocks(
@@ -645,17 +646,15 @@ function PortfolioFormModal({
   // Merge active series with portfolio's existing series (including inactive ones)
   const seriesList = useMemo(() => {
     const activeSeries = seriesData?.data || [];
-    const portfolioSeries = portfolio?.series || [];
+    const portfolioSeries = portfolio?.series;
 
     // Create a map of series by ID
     const seriesMap = new Map(activeSeries.map((s) => [s.id, s]));
 
-    // Add portfolio's series that are not in active list (inactive series)
-    portfolioSeries.forEach((s) => {
-      if (!seriesMap.has(s.id)) {
-        seriesMap.set(s.id, s);
-      }
-    });
+    // Add portfolio's series if not in active list (inactive series)
+    if (portfolioSeries && !seriesMap.has(portfolioSeries.id)) {
+      seriesMap.set(portfolioSeries.id, { ...portfolioSeries, is_active: false } as Series);
+    }
 
     return Array.from(seriesMap.values());
   }, [seriesData?.data, portfolio?.series]);
@@ -666,10 +665,12 @@ function PortfolioFormModal({
     );
   };
 
-  const toggleSeries = (s: Series) => {
-    setSelectedSeries((prev) =>
-      prev.some((item) => item.id === s.id) ? prev.filter((item) => item.id !== s.id) : [...prev, s]
-    );
+  const handleSeriesSelect = (s: Series | null) => {
+    if (s?.id === selectedSeries?.id) {
+      setSelectedSeries(null);
+    } else {
+      setSelectedSeries(s);
+    }
   };
 
   const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -771,7 +772,7 @@ function PortfolioFormModal({
           judul: judul.trim(),
           status: selectedStatus,
           tag_ids: selectedTags.map((t) => t.id),
-          series_ids: selectedSeries.map((s) => s.id),
+          series_id: selectedSeries?.id,
         });
       } else {
         setSubmitProgress('Membuat portfolio...');
@@ -784,9 +785,9 @@ function PortfolioFormModal({
         portfolioId = createRes.data.id;
         // Set status after creation if not draft
         if (selectedStatus !== 'draft') {
-          await adminPortfoliosApi.updatePortfolio(portfolioId, { status: selectedStatus, series_ids: selectedSeries.map((s) => s.id) });
-        } else if (selectedSeries.length > 0) {
-          await adminPortfoliosApi.updatePortfolio(portfolioId, { series_ids: selectedSeries.map((s) => s.id) });
+          await adminPortfoliosApi.updatePortfolio(portfolioId, { status: selectedStatus, series_id: selectedSeries?.id });
+        } else if (selectedSeries) {
+          await adminPortfoliosApi.updatePortfolio(portfolioId, { series_id: selectedSeries.id });
         }
       }
 
@@ -1068,13 +1069,13 @@ function PortfolioFormModal({
 
             {/* Series */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Series</Label>
+              <Label className="text-sm font-medium">Series Template</Label>
               <div className="flex flex-wrap gap-2 rounded-lg border bg-muted/30 p-3">
                 {seriesList.length === 0 ? (
                   <span className="text-sm text-muted-foreground">Tidak ada series</span>
                 ) : (
                   seriesList.map((s) => {
-                    const isSelected = selectedSeries.some((item) => item.id === s.id);
+                    const isSelected = selectedSeries?.id === s.id;
                     const isInactive = !s.is_active;
                     return (
                       <Badge
@@ -1089,7 +1090,7 @@ function PortfolioFormModal({
                               ? 'opacity-60'
                               : ''
                         }`}
-                        onClick={() => toggleSeries(s)}
+                        onClick={() => handleSeriesSelect(isSelected ? null : s)}
                         title={isInactive ? 'Series ini sudah tidak aktif' : undefined}
                       >
                         {s.nama}

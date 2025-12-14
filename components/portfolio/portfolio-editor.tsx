@@ -72,6 +72,7 @@ interface LocalContentBlock {
   isNew?: boolean;
   pendingFile?: File;
   pendingPreview?: string;
+  seriesInstruksi?: string; // Instruction from series template
 }
 
 const blockTypeOptions = [
@@ -105,7 +106,9 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
   // Form state
   const [judul, setJudul] = useState(portfolio?.judul || '');
   const [selectedTags, setSelectedTags] = useState<Tag[]>(portfolio?.tags || []);
-  const [selectedSeries, setSelectedSeries] = useState<Series[]>(portfolio?.series || []);
+  const [selectedSeries, setSelectedSeries] = useState<Series | null>(portfolio?.series || null);
+  const [pendingSeriesChange, setPendingSeriesChange] = useState<Series | null>(null);
+  const [showSeriesConfirm, setShowSeriesConfirm] = useState(false);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(portfolio?.thumbnail_url || null);
@@ -161,17 +164,15 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
   // This ensures inactive series that are already assigned to portfolio are still shown
   const seriesList = useMemo(() => {
     const activeSeries = seriesData?.data || [];
-    const portfolioSeries = portfolio?.series || [];
+    const portfolioSeries = portfolio?.series;
 
     // Create a map of active series by ID
     const seriesMap = new Map(activeSeries.map((s) => [s.id, s]));
 
-    // Add portfolio's series that are not in active list (inactive series)
-    portfolioSeries.forEach((s) => {
-      if (!seriesMap.has(s.id)) {
-        seriesMap.set(s.id, s);
-      }
-    });
+    // Add portfolio's series if not in active list (inactive series)
+    if (portfolioSeries && !seriesMap.has(portfolioSeries.id)) {
+      seriesMap.set(portfolioSeries.id, { ...portfolioSeries, is_active: false } as Series);
+    }
 
     return Array.from(seriesMap.values());
   }, [seriesData?.data, portfolio?.series]);
@@ -182,11 +183,60 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
     );
   };
 
-  const toggleSeries = (s: Series) => {
-    setSelectedSeries((prev) =>
-      prev.some((item) => item.id === s.id) ? prev.filter((item) => item.id !== s.id) : [...prev, s]
-    );
+  // Handle series selection - show confirmation if blocks exist
+  const handleSeriesSelect = (s: Series | null) => {
+    // If selecting the same series or deselecting, just update
+    if (s?.id === selectedSeries?.id) {
+      setSelectedSeries(null);
+      return;
+    }
+
+    // If there are existing blocks and selecting a new series with blocks, show confirmation
+    if (contentBlocks.length > 0 && s?.blocks && s.blocks.length > 0) {
+      setPendingSeriesChange(s);
+      setShowSeriesConfirm(true);
+    } else if (s?.blocks && s.blocks.length > 0) {
+      // No existing blocks, apply series template directly
+      applySeriesTemplate(s);
+    } else {
+      // Series has no blocks, just select it
+      setSelectedSeries(s);
+    }
   };
+
+  // Apply series template blocks
+  const applySeriesTemplate = (s: Series) => {
+    if (!s.blocks || s.blocks.length === 0) {
+      setSelectedSeries(s);
+      return;
+    }
+
+    // Replace content blocks with series template
+    const templateBlocks: LocalContentBlock[] = s.blocks.map((block, index) => ({
+      id: generateId(),
+      block_type: block.block_type,
+      block_order: index,
+      payload: getDefaultPayload(block.block_type),
+      isNew: true,
+      seriesInstruksi: block.instruksi, // Store instruction for display
+    }));
+
+    setContentBlocks(templateBlocks);
+    setSelectedSeries(s);
+    toast.success(`Template "${s.nama}" diterapkan`);
+  };
+
+  // Confirm series change
+  const confirmSeriesChange = () => {
+    if (pendingSeriesChange) {
+      applySeriesTemplate(pendingSeriesChange);
+    }
+    setPendingSeriesChange(null);
+    setShowSeriesConfirm(false);
+  };
+
+  // Check if blocks are locked (series with template is selected)
+  const isBlocksLocked = selectedSeries?.blocks && selectedSeries.blocks.length > 0;
 
   const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -311,7 +361,7 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
         await portfoliosApi.updatePortfolio(portfolioId, {
           judul: judul.trim(),
           tag_ids: selectedTags.map((t) => t.id),
-          series_ids: selectedSeries.map((s) => s.id),
+          series_id: selectedSeries?.id,
         });
       } else {
         // Create new portfolio
@@ -319,7 +369,7 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
         const createRes = await portfoliosApi.createPortfolio({
           judul: judul.trim(),
           tag_ids: selectedTags.map((t) => t.id),
-          series_ids: selectedSeries.map((s) => s.id),
+          series_id: selectedSeries?.id,
         });
         if (!createRes.data) throw new Error('Gagal membuat portfolio');
         portfolioId = createRes.data.id;
@@ -587,18 +637,19 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
           className="mb-8"
         >
           <Label className="mb-2 block text-sm font-medium text-muted-foreground">
-            Series <span className="font-normal">(pilih event/tema yang sesuai)</span>
+            Series Template <span className="font-normal">(opsional - pilih untuk menggunakan template)</span>
           </Label>
           <div className="flex flex-wrap items-center gap-2">
             {seriesList.map((s) => {
-              const isSelected = selectedSeries.some((item) => item.id === s.id);
+              const isSelected = selectedSeries?.id === s.id;
               const isInactive = !s.is_active;
+              const hasBlocks = s.blocks && s.blocks.length > 0;
               return (
                 <motion.button
                   key={s.id}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => toggleSeries(s)}
+                  onClick={() => handleSeriesSelect(isSelected ? null : s)}
                   className={cn(
                     'rounded-full px-3 py-1.5 text-sm font-medium transition-all',
                     isSelected
@@ -609,9 +660,10 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
                         ? 'bg-muted/50 text-muted-foreground/70 hover:bg-muted/60'
                         : 'bg-muted text-muted-foreground hover:bg-muted/80'
                   )}
-                  title={isInactive ? 'Series ini sudah tidak aktif' : undefined}
+                  title={isInactive ? 'Series ini sudah tidak aktif' : hasBlocks ? `${s.blocks?.length} blocks template` : undefined}
                 >
                   {s.nama}
+                  {hasBlocks && <span className="ml-1 text-xs opacity-70">({s.blocks?.length})</span>}
                   {isInactive && <span className="ml-1 text-xs opacity-70">(nonaktif)</span>}
                   {isSelected && <Check className="ml-1.5 inline h-3 w-3" />}
                 </motion.button>
@@ -621,7 +673,30 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
               <span className="text-sm text-muted-foreground">Tidak ada series tersedia</span>
             )}
           </div>
+          {selectedSeries && isBlocksLocked && (
+            <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+              ⚠️ Menggunakan template series - urutan dan tipe block tidak dapat diubah
+            </p>
+          )}
         </motion.div>
+
+        {/* Series Change Confirmation Dialog */}
+        <ConfirmDialog
+          open={showSeriesConfirm}
+          onOpenChange={setShowSeriesConfirm}
+          title="Ganti Series Template?"
+          description={
+            <>
+              Anda akan mengganti ke series <strong>&quot;{pendingSeriesChange?.nama}&quot;</strong>.
+              <span className="mt-2 block text-amber-600">
+                ⚠️ Semua block konten yang sudah ada ({contentBlocks.length} blocks) akan DIHAPUS dan diganti dengan template baru ({pendingSeriesChange?.blocks?.length || 0} blocks).
+              </span>
+            </>
+          }
+          confirmText="Ya, Ganti Series"
+          variant="destructive"
+          onConfirm={confirmSeriesChange}
+        />
 
         {/* Content Blocks */}
         <motion.div
@@ -637,11 +712,16 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
               <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                 {contentBlocks.length} block
               </span>
+              {isBlocksLocked && (
+                <Badge variant="outline" className="text-amber-600 border-amber-300">
+                  Template Terkunci
+                </Badge>
+              )}
             </div>
           </div>
 
           {/* Empty State */}
-          {contentBlocks.length === 0 && (
+          {contentBlocks.length === 0 && !isBlocksLocked && (
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -689,6 +769,7 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
                         key={block.id}
                         block={block}
                         index={index}
+                        isLocked={!!isBlocksLocked}
                         onUpdate={(payload) => updateBlock(block.id, payload)}
                         onUpdateFile={(file, preview) => updateBlockFile(block.id, file, preview)}
                         onRemove={() => removeBlock(block.id)}
@@ -713,8 +794,8 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
             </DndContext>
           )}
 
-          {/* Add Block Button */}
-          {contentBlocks.length > 0 && (
+          {/* Add Block Button - hidden when using series template */}
+          {contentBlocks.length > 0 && !isBlocksLocked && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -869,6 +950,7 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
 function ContentBlockEditor({
   block,
   index,
+  isLocked,
   onUpdate,
   onUpdateFile,
   onRemove,
@@ -876,12 +958,16 @@ function ContentBlockEditor({
 }: {
   block: LocalContentBlock;
   index: number;
+  isLocked: boolean;
   onUpdate: (payload: Record<string, unknown>) => void;
   onUpdateFile: (file: File | null, preview: string) => void;
   onRemove: () => void;
   onDuplicate: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ 
+    id: block.id,
+    disabled: isLocked, // Disable drag when locked
+  });
   const [isExpanded, setIsExpanded] = useState(true);
 
   const style = {
@@ -927,14 +1013,16 @@ function ContentBlockEditor({
     >
       {/* Block Header */}
       <div className="flex items-center gap-2 border-b px-3 py-2">
-        <button
-          type="button"
-          className="cursor-grab touch-none rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:cursor-grabbing"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="h-4 w-4" />
-        </button>
+        {!isLocked && (
+          <button
+            type="button"
+            className="cursor-grab touch-none rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:cursor-grabbing"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+        )}
 
         <div className={cn('rounded-md p-1.5', blockTypeInfo?.bgColor)}>
           <Icon className={cn('h-3.5 w-3.5', blockTypeInfo?.iconColor)} />
@@ -944,28 +1032,32 @@ function ContentBlockEditor({
         <span className="text-xs text-muted-foreground">#{index + 1}</span>
 
         <div className="ml-auto flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onDuplicate}>
-                <Plus className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Duplikasi</TooltipContent>
-          </Tooltip>
+          {!isLocked && (
+            <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onDuplicate}>
+                    <Plus className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Duplikasi</TooltipContent>
+              </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                onClick={onRemove}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Hapus</TooltipContent>
-          </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    onClick={onRemove}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Hapus</TooltipContent>
+              </Tooltip>
+            </>
+          )}
 
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsExpanded(!isExpanded)}>
             <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', !isExpanded && '-rotate-90')} />
@@ -983,6 +1075,14 @@ function ContentBlockEditor({
             className="overflow-hidden"
           >
             <div className="p-4">
+              {/* Series Instruction */}
+              {block.seriesInstruksi && (
+                <div className="mb-4 flex items-start gap-2 rounded-lg bg-blue-50 p-3 dark:bg-blue-950/30">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-blue-500 mt-0.5" />
+                  <p className="text-sm text-blue-700 dark:text-blue-300">{block.seriesInstruksi}</p>
+                </div>
+              )}
+
               {block.block_type === 'text' && (
                 <Textarea
                   value={(block.payload.content as string) || ''}
