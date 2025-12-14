@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuthStore } from '@/lib/stores/auth-store';
-import { HeroSection, AboutSection, FaqSection } from '@/components/landing';
+import { HeroSection, AboutSection, FaqSection, TopStudentsSection, TopProjectsSection } from '@/components/landing';
 import { FeedList } from '@/components/feed/feed-list';
 
 export default function HomePage() {
@@ -12,6 +12,8 @@ export default function HomePage() {
       <>
         <HeroSection />
         <AboutSection />
+        <TopStudentsSection />
+        <TopProjectsSection />
         <FaqSection />
       </>
     );

@@ -37,8 +37,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
-import { adminFeedbackApi } from '@/lib/api/admin';
-import { Feedback, FeedbackStatus } from '@/lib/types';
+import { adminFeedbackApi, Feedback, FeedbackStatus } from '@/lib/api/admin';
 import { formatDate } from '@/lib/utils/format';
 import { useDebounce } from '@/lib/hooks/use-debounce';
 import { cn } from '@/lib/utils';

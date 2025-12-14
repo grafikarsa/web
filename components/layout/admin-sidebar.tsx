@@ -26,6 +26,7 @@ import {
   Layers,
   Shield,
   ArrowLeft,
+  Upload,
 } from 'lucide-react';
 import api from '@/lib/api/client';
 
@@ -45,6 +46,7 @@ const capabilityMap: Record<string, string> = {
   '/admin/tags': 'tags',
   '/admin/series': 'series',
   '/admin/users': 'users',
+  '/admin/import': 'users',
   '/admin/special-roles': 'special_roles',
   '/admin/majors': 'majors',
   '/admin/classes': 'classes',
@@ -75,6 +77,7 @@ const navSections = [
     title: 'Pengguna',
     items: [
       { href: '/admin/users', label: 'Users', icon: Users, iconColor: 'text-violet-500' },
+      { href: '/admin/import', label: 'Import Siswa', icon: Upload, iconColor: 'text-green-500' },
       { href: '/admin/special-roles', label: 'Special Roles', icon: Shield, iconColor: 'text-amber-500' },
     ],
   },

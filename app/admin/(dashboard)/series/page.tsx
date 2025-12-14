@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -16,7 +17,14 @@ import {
   Eye,
   ChevronDown,
   ChevronUp,
+  FileDown,
 } from 'lucide-react';
+
+// Dynamic import for PDF export modal (client-side only)
+const ExportPdfModal = dynamic(
+  () => import('@/components/admin/pdf-export/export-pdf-modal').then((mod) => mod.ExportPdfModal),
+  { ssr: false }
+);
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -71,6 +79,7 @@ export default function AdminSeriesPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deleteSeries, setDeleteSeries] = useState<Series | null>(null);
   const [previewSeriesId, setPreviewSeriesId] = useState<string | null>(null);
+  const [exportSeries, setExportSeries] = useState<Series | null>(null);
   const debouncedSearch = useDebounce(search, 300);
 
   const { data, isLoading } = useQuery({
@@ -160,17 +169,30 @@ export default function AdminSeriesPage() {
       key: 'actions',
       header: '',
       render: (s) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            setPreviewSeriesId(s.id);
-          }}
-        >
-          <Eye className="h-4 w-4 mr-1" />
-          Preview
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setPreviewSeriesId(s.id);
+            }}
+          >
+            <Eye className="h-4 w-4 mr-1" />
+            Preview
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setExportSeries(s);
+            }}
+          >
+            <FileDown className="h-4 w-4 mr-1" />
+            Export
+          </Button>
+        </div>
       ),
     },
   ];
@@ -228,6 +250,12 @@ export default function AdminSeriesPage() {
         variant="destructive"
         isLoading={deleteMutation.isPending}
         onConfirm={() => deleteSeries && deleteMutation.mutate(deleteSeries.id)}
+      />
+
+      <ExportPdfModal
+        series={exportSeries}
+        open={!!exportSeries}
+        onClose={() => setExportSeries(null)}
       />
     </div>
   );

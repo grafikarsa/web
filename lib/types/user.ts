@@ -82,6 +82,7 @@ export interface UserCard {
   username: string;
   nama: string;
   avatar_url?: string;
+  banner_url?: string;
   role: UserRole;
   kelas?: Kelas;
   jurusan?: Jurusan;

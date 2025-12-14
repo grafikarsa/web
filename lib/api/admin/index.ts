@@ -368,6 +368,48 @@ export interface UpdateSeriesRequest {
   blocks?: CreateSeriesBlockRequest[];
 }
 
+// Export types
+export interface PortfolioExportUser {
+  id: string;
+  nama: string;
+  username: string;
+  avatar_url?: string;
+  nisn?: string;
+  nis?: string;
+  kelas_nama?: string;
+  jurusan_nama?: string;
+}
+
+export interface PortfolioExportItem {
+  id: string;
+  judul: string;
+  thumbnail_url?: string;
+  created_at: string;
+  content_blocks: Array<{
+    id: string;
+    block_type: ContentBlockType;
+    block_order: number;
+    payload: Record<string, unknown>;
+  }>;
+  user: PortfolioExportUser;
+}
+
+export interface SeriesExportResponse {
+  series: SeriesDetail;
+  portfolios: PortfolioExportItem[];
+  meta: {
+    total_count: number;
+    user_count: number;
+    exported_at: string;
+  };
+}
+
+export interface ExportPreviewResponse {
+  portfolio_count: number;
+  user_count: number;
+  estimated_pages: number;
+}
+
 export const adminSeriesApi = {
   getSeries: async (params?: PaginationParams & { search?: string }) => {
     const response = await api.get<ApiResponse<Series[]>>('/admin/series', { params });
@@ -393,11 +435,54 @@ export const adminSeriesApi = {
     const response = await api.delete<ApiResponse<null>>(`/admin/series/${id}`);
     return response.data;
   },
+
+  // Export endpoints
+  getExportPreview: async (id: string, params?: { jurusan_id?: string; kelas_id?: string }) => {
+    const response = await api.get<ApiResponse<ExportPreviewResponse>>(`/admin/series/${id}/export/preview`, { params });
+    return response.data;
+  },
+
+  getExportData: async (id: string, params?: { jurusan_id?: string; kelas_id?: string }) => {
+    const response = await api.get<ApiResponse<SeriesExportResponse>>(`/admin/series/${id}/export`, { params });
+    return response.data;
+  },
 };
 
-// Admin Feedback API
-import { Feedback, FeedbackStats, UpdateFeedbackRequest } from '@/lib/types';
+// Admin Feedback Types
+export type FeedbackKategori = 'bug' | 'saran' | 'lainnya';
+export type FeedbackStatus = 'pending' | 'read' | 'resolved';
 
+export interface Feedback {
+  id: string;
+  user_id?: string;
+  user?: {
+    id: string;
+    nama: string;
+    username: string;
+    avatar_url?: string;
+  };
+  kategori: FeedbackKategori;
+  pesan: string;
+  status: FeedbackStatus;
+  admin_notes?: string;
+  resolved_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UpdateFeedbackRequest {
+  status?: FeedbackStatus;
+  admin_notes?: string;
+}
+
+export interface FeedbackStats {
+  total: number;
+  pending: number;
+  read: number;
+  resolved: number;
+}
+
+// Admin Feedback API
 export const adminFeedbackApi = {
   getFeedback: async (params?: PaginationParams & { search?: string; kategori?: string; status?: string }) => {
     const response = await api.get<ApiResponse<Feedback[]>>('/admin/feedback', { params });
@@ -552,6 +637,73 @@ export const adminSpecialRolesApi = {
 
   updateUserSpecialRoles: async (userId: string, data: UserSpecialRolesRequest) => {
     const response = await api.put<ApiResponse<null>>(`/admin/users/${userId}/special-roles`, data);
+    return response.data;
+  },
+};
+
+// ============================================================================
+// STUDENT IMPORT API
+// ============================================================================
+
+export interface StudentImportError {
+  row: number;
+  nis?: string;
+  nama?: string;
+  error: string;
+}
+
+export interface ClassToCreate {
+  nama: string;
+  tingkat: number;
+  jurusan: string;
+  rombel: string;
+}
+
+export interface StudentImportDryRunResponse {
+  total_rows: number;
+  classes_to_create: ClassToCreate[] | null;
+  students_to_create: number;
+  validation_errors: StudentImportError[] | null;
+}
+
+export interface StudentImportResponse {
+  total_rows: number;
+  created_classes: number;
+  created_students: number;
+  skipped: number;
+  errors: StudentImportError[] | null;
+}
+
+export const adminImportApi = {
+  importStudents: async (file: File, dryRun: boolean = false) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await api.post<ApiResponse<StudentImportResponse | StudentImportDryRunResponse>>(
+      `/admin/import/students?dry_run=${dryRun}`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data;
+  },
+
+  dryRunImport: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await api.post<ApiResponse<StudentImportDryRunResponse>>(
+      '/admin/import/students?dry_run=true',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
     return response.data;
   },
 };

@@ -47,3 +47,46 @@ export const seriesApi = {
     return response.data;
   },
 };
+
+// Top Students & Projects types
+export interface TopStudent {
+  id: string;
+  username: string;
+  nama: string;
+  avatar_url: string | null;
+  banner_url: string | null;
+  kelas_nama: string | null;
+  jurusan_nama: string | null;
+  portfolio_count: number;
+  total_likes: number;
+  avg_assessment_score: number;
+  follower_count: number;
+  score: number;
+}
+
+export interface TopProject {
+  id: string;
+  judul: string;
+  slug: string;
+  thumbnail_url: string | null;
+  published_at: string | null;
+  user_id: string;
+  username: string;
+  user_nama: string;
+  user_avatar: string | null;
+  assessment_score: number;
+  like_count: number;
+  score: number;
+}
+
+export const topApi = {
+  getTopStudents: async (): Promise<ApiResponse<TopStudent[]>> => {
+    const response = await api.get<ApiResponse<TopStudent[]>>('/top-students');
+    return response.data;
+  },
+
+  getTopProjects: async (): Promise<ApiResponse<TopProject[]>> => {
+    const response = await api.get<ApiResponse<TopProject[]>>('/top-projects');
+    return response.data;
+  },
+};

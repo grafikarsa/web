@@ -11,11 +11,28 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "i.pravatar.cc",
       },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+      // Production MinIO/CDN
+      {
+        protocol: "https",
+        hostname: "cdn.grafikarsa.com",
+      },
+      // Development MinIO
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "9000",
+      },
     ],
     // Skip image optimization for local development
-    // This allows loading images from localhost:9000 (MinIO)
     unoptimized: process.env.NODE_ENV === "development",
   },
+  // Production optimizations
+  poweredByHeader: false,
+  compress: true,
 };
 
 export default nextConfig;

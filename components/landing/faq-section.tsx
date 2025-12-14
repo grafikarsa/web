@@ -47,7 +47,7 @@ export function FaqSection() {
       <div className="mx-auto max-w-5xl px-4 md:px-6">
         <div className="mx-auto max-w-xl text-center">
           <h2 className="text-balance text-3xl font-bold md:text-4xl lg:text-5xl">
-            Pertanyaan Umum
+            FAQs
           </h2>
           <p className="text-muted-foreground mt-4 text-balance">
             Temukan jawaban untuk pertanyaan yang sering diajukan tentang Grafikarsa.
@@ -72,12 +72,6 @@ export function FaqSection() {
             ))}
           </Accordion>
 
-          <p className="text-muted-foreground mt-6 px-8">
-            Tidak menemukan jawaban?{' '}
-            <Link href="mailto:admin@grafikarsa.com" className="text-primary font-medium hover:underline">
-              Hubungi Kami
-            </Link>
-          </p>
         </div>
       </div>
     </section>

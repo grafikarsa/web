@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import React from 'react';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -39,7 +40,21 @@ export function GuestNavbar() {
           <div className="relative flex flex-wrap items-center justify-between gap-6 py-3 lg:gap-0 lg:py-4">
             <div className="flex w-full justify-between lg:w-auto">
               <Link href="/" aria-label="home" className="flex items-center space-x-2">
-                <span className="text-xl font-bold text-primary">Grafikarsa</span>
+                <Image
+                  src="/images/logos/logo_black.svg"
+                  alt="Grafikarsa"
+                  width={28}
+                  height={28}
+                  className="block dark:hidden"
+                />
+                <Image
+                  src="/images/logos/logo_white.svg"
+                  alt="Grafikarsa"
+                  width={28}
+                  height={28}
+                  className="hidden dark:block"
+                />
+                <span className="text-xl font-bold text-foreground">Grafikarsa</span>
               </Link>
 
               <button
@@ -58,7 +73,7 @@ export function GuestNavbar() {
                   <li key={index}>
                     <Link
                       href={item.href}
-                      className="block text-muted-foreground duration-150 hover:text-accent-foreground"
+                      className="block text-foreground/80 duration-150 hover:text-foreground"
                     >
                       <span>{item.name}</span>
                     </Link>
@@ -74,7 +89,7 @@ export function GuestNavbar() {
                     <li key={index}>
                       <Link
                         href={item.href}
-                        className="block text-muted-foreground duration-150 hover:text-accent-foreground"
+                        className="block text-foreground/80 duration-150 hover:text-foreground"
                         onClick={() => setMenuState(false)}
                       >
                         <span>{item.name}</span>

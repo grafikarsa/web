@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { GuestNavbar, StudentSidebar, StudentHeader, Footer } from '@/components/layout';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FeedbackButton } from '@/components/feedback/feedback-button';
 
 function LoadingScreen() {
   return (
@@ -45,7 +44,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         <GuestNavbar />
         <main className="flex-1">{children}</main>
         <Footer />
-        <FeedbackButton />
       </div>
     );
   }
@@ -58,7 +56,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         <StudentHeader />
         <main className="flex-1 p-6">{children}</main>
       </div>
-      <FeedbackButton />
     </div>
   );
 }
