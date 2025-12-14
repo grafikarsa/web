@@ -375,3 +375,65 @@ export const adminFeedbackApi = {
     return response.data;
   },
 };
+
+
+// Admin Assessment Metrics API
+import {
+  AssessmentMetric,
+  CreateMetricRequest,
+  UpdateMetricRequest,
+  ReorderMetricsRequest,
+  PortfolioForAssessment,
+  AssessmentResponse,
+  CreateAssessmentRequest,
+} from '@/lib/types';
+
+export const adminAssessmentMetricsApi = {
+  getMetrics: async (params?: { active_only?: boolean }) => {
+    const response = await api.get<ApiResponse<AssessmentMetric[]>>('/admin/assessment-metrics', { params });
+    return response.data;
+  },
+
+  createMetric: async (data: CreateMetricRequest) => {
+    const response = await api.post<ApiResponse<AssessmentMetric>>('/admin/assessment-metrics', data);
+    return response.data;
+  },
+
+  updateMetric: async (id: string, data: UpdateMetricRequest) => {
+    const response = await api.patch<ApiResponse<AssessmentMetric>>(`/admin/assessment-metrics/${id}`, data);
+    return response.data;
+  },
+
+  deleteMetric: async (id: string) => {
+    const response = await api.delete<ApiResponse<null>>(`/admin/assessment-metrics/${id}`);
+    return response.data;
+  },
+
+  reorderMetrics: async (data: ReorderMetricsRequest) => {
+    const response = await api.put<ApiResponse<null>>('/admin/assessment-metrics/reorder', data);
+    return response.data;
+  },
+};
+
+// Admin Portfolio Assessments API
+export const adminAssessmentsApi = {
+  getPortfolios: async (params?: PaginationParams & { filter?: 'pending' | 'assessed' | 'all'; search?: string }) => {
+    const response = await api.get<ApiResponse<PortfolioForAssessment[]>>('/admin/assessments', { params });
+    return response.data;
+  },
+
+  getAssessment: async (portfolioId: string) => {
+    const response = await api.get<ApiResponse<{ portfolio: { id: string; judul: string; slug: string; thumbnail_url?: string }; assessment: AssessmentResponse | null }>>(`/admin/assessments/${portfolioId}`);
+    return response.data;
+  },
+
+  createOrUpdateAssessment: async (portfolioId: string, data: CreateAssessmentRequest) => {
+    const response = await api.post<ApiResponse<AssessmentResponse>>(`/admin/assessments/${portfolioId}`, data);
+    return response.data;
+  },
+
+  deleteAssessment: async (portfolioId: string) => {
+    const response = await api.delete<ApiResponse<null>>(`/admin/assessments/${portfolioId}`);
+    return response.data;
+  },
+};

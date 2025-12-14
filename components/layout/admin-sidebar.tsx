@@ -20,6 +20,8 @@ import {
   Calendar,
   Tags,
   MessageSquare,
+  Star,
+  BarChart3,
 } from 'lucide-react';
 import api from '@/lib/api/client';
 
@@ -42,6 +44,8 @@ const navSections = [
     items: [
       { href: '/admin/portfolios', label: 'Portfolios', icon: FolderOpen, iconColor: 'text-emerald-500' },
       { href: '/admin/moderation', label: 'Moderasi', icon: ClipboardCheck, iconColor: 'text-orange-500', badge: 'pending' },
+      { href: '/admin/assessments', label: 'Penilaian', icon: Star, iconColor: 'text-yellow-500' },
+      { href: '/admin/assessment-metrics', label: 'Metrik Penilaian', icon: BarChart3, iconColor: 'text-indigo-500' },
       { href: '/admin/tags', label: 'Tags', icon: Tags, iconColor: 'text-pink-500' },
     ],
   },
