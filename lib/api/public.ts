@@ -1,5 +1,5 @@
 import api from './client';
-import { ApiResponse } from '@/lib/types';
+import { ApiResponse, Series } from '@/lib/types';
 
 export interface JurusanPublic {
   id: string;
@@ -30,6 +30,13 @@ export const publicApi = {
 
   getKelas: async (params?: KelasParams): Promise<ApiResponse<KelasPublic[]>> => {
     const response = await api.get<ApiResponse<KelasPublic[]>>('/kelas', { params });
+    return response.data;
+  },
+};
+
+export const seriesApi = {
+  getSeries: async (): Promise<ApiResponse<Series[]>> => {
+    const response = await api.get<ApiResponse<Series[]>>('/series');
     return response.data;
   },
 };

@@ -111,7 +111,7 @@ export const adminPortfoliosApi = {
     return response.data;
   },
 
-  updatePortfolio: async (id: string, data: Partial<Portfolio> & { tag_ids?: string[] }) => {
+  updatePortfolio: async (id: string, data: Partial<Portfolio> & { tag_ids?: string[]; series_ids?: string[] }) => {
     const response = await api.patch<ApiResponse<Portfolio>>(`/admin/portfolios/${id}`, data);
     return response.data;
   },
@@ -346,6 +346,31 @@ export const adminTagsApi = {
   },
 };
 
+// Admin Series API
+import { Series } from '@/lib/types';
+
+export const adminSeriesApi = {
+  getSeries: async (params?: PaginationParams & { search?: string }) => {
+    const response = await api.get<ApiResponse<Series[]>>('/admin/series', { params });
+    return response.data;
+  },
+
+  createSeries: async (data: { nama: string; is_active?: boolean }) => {
+    const response = await api.post<ApiResponse<Series>>('/admin/series', data);
+    return response.data;
+  },
+
+  updateSeries: async (id: string, data: { nama?: string; is_active?: boolean }) => {
+    const response = await api.patch<ApiResponse<Series>>(`/admin/series/${id}`, data);
+    return response.data;
+  },
+
+  deleteSeries: async (id: string) => {
+    const response = await api.delete<ApiResponse<null>>(`/admin/series/${id}`);
+    return response.data;
+  },
+};
+
 // Admin Feedback API
 import { Feedback, FeedbackStats, UpdateFeedbackRequest } from '@/lib/types';
 
@@ -434,6 +459,75 @@ export const adminAssessmentsApi = {
 
   deleteAssessment: async (portfolioId: string) => {
     const response = await api.delete<ApiResponse<null>>(`/admin/assessments/${portfolioId}`);
+    return response.data;
+  },
+};
+
+// Admin Special Roles API
+import {
+  SpecialRole,
+  SpecialRoleDetail,
+  CapabilityInfo,
+  CreateSpecialRoleRequest,
+  UpdateSpecialRoleRequest,
+  AssignUsersRequest,
+  UserSpecialRolesRequest,
+} from '@/lib/types';
+
+export const adminSpecialRolesApi = {
+  getSpecialRoles: async (params?: { search?: string; include_inactive?: boolean }) => {
+    const response = await api.get<ApiResponse<SpecialRole[]>>('/admin/special-roles', { params });
+    return response.data;
+  },
+
+  getActiveSpecialRoles: async () => {
+    const response = await api.get<ApiResponse<SpecialRole[]>>('/admin/special-roles/active');
+    return response.data;
+  },
+
+  getCapabilities: async () => {
+    const response = await api.get<ApiResponse<CapabilityInfo[]>>('/admin/special-roles/capabilities');
+    return response.data;
+  },
+
+  getSpecialRole: async (id: string) => {
+    const response = await api.get<ApiResponse<SpecialRoleDetail>>(`/admin/special-roles/${id}`);
+    return response.data;
+  },
+
+  createSpecialRole: async (data: CreateSpecialRoleRequest) => {
+    const response = await api.post<ApiResponse<SpecialRole>>('/admin/special-roles', data);
+    return response.data;
+  },
+
+  updateSpecialRole: async (id: string, data: UpdateSpecialRoleRequest) => {
+    const response = await api.patch<ApiResponse<SpecialRole>>(`/admin/special-roles/${id}`, data);
+    return response.data;
+  },
+
+  deleteSpecialRole: async (id: string) => {
+    const response = await api.delete<ApiResponse<null>>(`/admin/special-roles/${id}`);
+    return response.data;
+  },
+
+  assignUsers: async (roleId: string, data: AssignUsersRequest) => {
+    const response = await api.post<ApiResponse<null>>(`/admin/special-roles/${roleId}/users`, data);
+    return response.data;
+  },
+
+  removeUser: async (roleId: string, userId: string) => {
+    const response = await api.delete<ApiResponse<null>>(`/admin/special-roles/${roleId}/users/${userId}`);
+    return response.data;
+  },
+
+  // User special roles management
+  getUserSpecialRoles: async (userId: string) => {
+    const response = await api.get<ApiResponse<SpecialRole[]>>(`/admin/users/${userId}/special-roles`);
+    return response.data;
+  },
+
+  updateUserSpecialRoles: async (userId: string, data: UserSpecialRolesRequest) => {
+    const response = await api.put<ApiResponse<null>>(`/admin/users/${userId}/special-roles`, data);
     return response.data;
   },
 };

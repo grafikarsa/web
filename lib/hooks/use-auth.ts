@@ -1,14 +1,14 @@
 'use client';
 
 import { useAuthStore } from '@/lib/stores/auth-store';
-import { authApi } from '@/lib/api';
+import { authApi, profileApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 export function useAuth() {
   const router = useRouter();
-  const { user, isAuthenticated, isLoading, login: storeLogin, logout: storeLogout } = useAuthStore();
+  const { user, isAuthenticated, isLoading, login: storeLogin, logout: storeLogout, setUser } = useAuthStore();
 
   const loginMutation = useMutation({
     mutationFn: async ({ username, password }: { username: string; password: string }) => {
@@ -18,8 +18,17 @@ export function useAuth() {
       }
       return response.data;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       storeLogin(data.access_token, data.user);
+      // Fetch full user data including special_roles and capabilities
+      try {
+        const meResponse = await profileApi.getMe();
+        if (meResponse.success && meResponse.data) {
+          setUser(meResponse.data);
+        }
+      } catch {
+        // Ignore error, basic user data is already set
+      }
       toast.success('Login berhasil!');
       router.push('/');
     },

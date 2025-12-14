@@ -19,7 +19,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { Home, Compass, User, Plus, Search, Pencil } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { Home, Compass, User, Plus, Search, Pencil, Settings, Shield } from 'lucide-react';
 
 export function StudentSidebar() {
   const pathname = usePathname();
@@ -143,6 +144,19 @@ export function StudentSidebar() {
                   Edit Profil
                 </Button>
               </Link>
+
+              {/* Admin Panel Link - Show for admin or users with special roles */}
+              {(user?.role === 'admin' || (user?.special_roles && user.special_roles.length > 0)) && (
+                <>
+                  <Separator />
+                  <Link href="/admin">
+                    <Button size="sm" variant="default" className="w-full gap-2">
+                      <Shield className="h-4 w-4" />
+                      Admin Panel
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
           </PopoverContent>
         </Popover>

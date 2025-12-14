@@ -179,6 +179,17 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
               ))}
             </div>
           )}
+
+          {/* Series */}
+          {portfolio.series && portfolio.series.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {portfolio.series.map((s) => (
+                <Badge key={s.id} className="bg-blue-500 font-normal text-white hover:bg-blue-600">
+                  {s.nama}
+                </Badge>
+              ))}
+            </div>
+          )}
         </header>
 
         {/* Admin Review Note */}

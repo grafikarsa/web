@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -57,9 +57,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Progress } from '@/components/ui/progress';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { portfoliosApi, tagsApi } from '@/lib/api';
+import { seriesApi } from '@/lib/api/public';
 import { uploadsApi } from '@/lib/api/admin';
 import { useAuthStore } from '@/lib/stores/auth-store';
-import { Portfolio, Tag, ContentBlockType } from '@/lib/types';
+import { Portfolio, Tag, Series, ContentBlockType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 // Types
@@ -104,6 +105,7 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
   // Form state
   const [judul, setJudul] = useState(portfolio?.judul || '');
   const [selectedTags, setSelectedTags] = useState<Tag[]>(portfolio?.tags || []);
+  const [selectedSeries, setSelectedSeries] = useState<Series[]>(portfolio?.series || []);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(portfolio?.thumbnail_url || null);
@@ -149,9 +151,40 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
 
   const tags = tagsData?.data || [];
 
+  // Fetch series (active only)
+  const { data: seriesData } = useQuery({
+    queryKey: ['series'],
+    queryFn: () => seriesApi.getSeries(),
+  });
+
+  // Merge active series with portfolio's existing series (including inactive ones)
+  // This ensures inactive series that are already assigned to portfolio are still shown
+  const seriesList = useMemo(() => {
+    const activeSeries = seriesData?.data || [];
+    const portfolioSeries = portfolio?.series || [];
+
+    // Create a map of active series by ID
+    const seriesMap = new Map(activeSeries.map((s) => [s.id, s]));
+
+    // Add portfolio's series that are not in active list (inactive series)
+    portfolioSeries.forEach((s) => {
+      if (!seriesMap.has(s.id)) {
+        seriesMap.set(s.id, s);
+      }
+    });
+
+    return Array.from(seriesMap.values());
+  }, [seriesData?.data, portfolio?.series]);
+
   const toggleTag = (tag: Tag) => {
     setSelectedTags((prev) =>
       prev.some((t) => t.id === tag.id) ? prev.filter((t) => t.id !== tag.id) : [...prev, tag]
+    );
+  };
+
+  const toggleSeries = (s: Series) => {
+    setSelectedSeries((prev) =>
+      prev.some((item) => item.id === s.id) ? prev.filter((item) => item.id !== s.id) : [...prev, s]
     );
   };
 
@@ -278,6 +311,7 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
         await portfoliosApi.updatePortfolio(portfolioId, {
           judul: judul.trim(),
           tag_ids: selectedTags.map((t) => t.id),
+          series_ids: selectedSeries.map((s) => s.id),
         });
       } else {
         // Create new portfolio
@@ -285,6 +319,7 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
         const createRes = await portfoliosApi.createPortfolio({
           judul: judul.trim(),
           tag_ids: selectedTags.map((t) => t.id),
+          series_ids: selectedSeries.map((s) => s.id),
         });
         if (!createRes.data) throw new Error('Gagal membuat portfolio');
         portfolioId = createRes.data.id;
@@ -540,6 +575,50 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
             })}
             {tags.length === 0 && (
               <span className="text-sm text-muted-foreground">Tidak ada tags tersedia</span>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Series */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.17 }}
+          className="mb-8"
+        >
+          <Label className="mb-2 block text-sm font-medium text-muted-foreground">
+            Series <span className="font-normal">(pilih event/tema yang sesuai)</span>
+          </Label>
+          <div className="flex flex-wrap items-center gap-2">
+            {seriesList.map((s) => {
+              const isSelected = selectedSeries.some((item) => item.id === s.id);
+              const isInactive = !s.is_active;
+              return (
+                <motion.button
+                  key={s.id}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => toggleSeries(s)}
+                  className={cn(
+                    'rounded-full px-3 py-1.5 text-sm font-medium transition-all',
+                    isSelected
+                      ? isInactive
+                        ? 'bg-blue-400/70 text-white shadow-md'
+                        : 'bg-blue-500 text-white shadow-md'
+                      : isInactive
+                        ? 'bg-muted/50 text-muted-foreground/70 hover:bg-muted/60'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                  )}
+                  title={isInactive ? 'Series ini sudah tidak aktif' : undefined}
+                >
+                  {s.nama}
+                  {isInactive && <span className="ml-1 text-xs opacity-70">(nonaktif)</span>}
+                  {isSelected && <Check className="ml-1.5 inline h-3 w-3" />}
+                </motion.button>
+              );
+            })}
+            {seriesList.length === 0 && (
+              <span className="text-sm text-muted-foreground">Tidak ada series tersedia</span>
             )}
           </div>
         </motion.div>

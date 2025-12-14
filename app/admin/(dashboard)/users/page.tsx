@@ -66,10 +66,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
-import { adminUsersApi, adminMajorsApi, adminClassesApi, uploadsApi } from '@/lib/api/admin';
-import { User } from '@/lib/types';
+import { adminUsersApi, adminMajorsApi, adminClassesApi, uploadsApi, adminSpecialRolesApi } from '@/lib/api/admin';
+import { User, SpecialRole, generateBgColor } from '@/lib/types';
 import { useDebounce } from '@/lib/hooks/use-debounce';
 import { formatDate } from '@/lib/utils/format';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const roleOptions = [
   { value: 'all', label: 'Semua Role' },
@@ -711,6 +712,7 @@ function UserFormModal({
     avatar_url: '',
     banner_url: '',
   });
+  const [selectedSpecialRoles, setSelectedSpecialRoles] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
@@ -719,6 +721,22 @@ function UserFormModal({
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const debouncedUsername = useDebounce(formData.username, 500);
   const debouncedEmail = useDebounce(formData.email, 500);
+
+  // Fetch active special roles
+  const { data: specialRolesData } = useQuery({
+    queryKey: ['admin-special-roles-active'],
+    queryFn: () => adminSpecialRolesApi.getSpecialRoles({ is_active: true, limit: 100 }),
+    enabled: open,
+  });
+
+  const specialRoles = specialRolesData?.data || [];
+
+  // Fetch user's current special roles when editing
+  const { data: userSpecialRolesData } = useQuery({
+    queryKey: ['admin-user-special-roles', user?.id],
+    queryFn: () => adminSpecialRolesApi.getUserSpecialRoles(user!.id),
+    enabled: open && isEdit && !!user?.id,
+  });
 
   // Check username availability
   useEffect(() => {
@@ -811,9 +829,17 @@ function UserFormModal({
           avatar_url: '',
           banner_url: '',
         });
+        setSelectedSpecialRoles([]);
       }
     }
   }, [open, user]);
+
+  // Update selected special roles when user data is loaded
+  useEffect(() => {
+    if (userSpecialRolesData?.data) {
+      setSelectedSpecialRoles(userSpecialRolesData.data.map((sr: SpecialRole) => sr.id));
+    }
+  }, [userSpecialRolesData]);
 
   // Handle avatar upload
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -913,6 +939,10 @@ function UserFormModal({
         if (formData.password) {
           await adminUsersApi.resetPassword(user.id, formData.password);
         }
+        
+        // Update special roles
+        await adminSpecialRolesApi.updateUserSpecialRoles(user.id, { special_role_ids: selectedSpecialRoles });
+        
         toast.success('User berhasil diperbarui');
       } else {
         await adminUsersApi.createUser({
@@ -1158,6 +1188,54 @@ function UserFormModal({
               </div>
             )}
           </div>
+
+          {/* Special Roles (only for edit mode and non-admin users) */}
+          {isEdit && formData.role !== 'admin' && specialRoles.length > 0 && (
+            <div className="space-y-3 rounded-lg border p-4">
+              <div>
+                <h4 className="text-sm font-medium">Special Roles</h4>
+                <p className="text-xs text-muted-foreground">
+                  Berikan akses admin terbatas sesuai role yang dipilih
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {specialRoles.map((role) => {
+                  const isSelected = selectedSpecialRoles.includes(role.id);
+                  return (
+                    <button
+                      key={role.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedSpecialRoles(prev =>
+                          isSelected
+                            ? prev.filter(id => id !== role.id)
+                            : [...prev, role.id]
+                        );
+                      }}
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
+                        isSelected
+                          ? 'ring-2 ring-offset-2'
+                          : 'opacity-60 hover:opacity-100'
+                      }`}
+                      style={{
+                        backgroundColor: generateBgColor(role.color),
+                        color: role.color,
+                        ...(isSelected && { ringColor: role.color }),
+                      }}
+                    >
+                      {isSelected && <Check className="h-3 w-3" />}
+                      {role.nama}
+                    </button>
+                  );
+                })}
+              </div>
+              {selectedSpecialRoles.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {selectedSpecialRoles.length} role dipilih - User akan mendapat akses ke Admin Panel
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Avatar & Banner Upload */}
           <div className="space-y-4 rounded-lg border p-4">

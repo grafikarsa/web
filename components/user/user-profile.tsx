@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { User } from '@/lib/types';
+import { User, generateBgColor } from '@/lib/types';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi } from '@/lib/api';
@@ -104,7 +104,28 @@ export function UserProfile({ profile }: UserProfileProps) {
 
         {/* Name & Username */}
         <div className="mt-4">
-          <h1 className="text-2xl font-bold md:text-3xl">{profile.nama}</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-bold md:text-3xl">{profile.nama}</h1>
+            {/* Special Role Badges */}
+            {profile.special_roles && profile.special_roles.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {profile.special_roles.map((sr) => (
+                  <Badge
+                    key={sr.id}
+                    className="text-xs font-medium"
+                    style={{
+                      backgroundColor: generateBgColor(sr.color),
+                      color: sr.color,
+                      borderColor: generateBgColor(sr.color, 0.3),
+                    }}
+                    variant="outline"
+                  >
+                    {sr.nama}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
           <p className="text-muted-foreground">@{profile.username}</p>
         </div>
 

@@ -38,6 +38,15 @@ export interface ClassHistory {
   tahun_ajaran: number;
 }
 
+// Special role info for user
+export interface UserSpecialRole {
+  id: string;
+  nama: string;
+  color: string;
+  capabilities: string[];
+  is_active: boolean;
+}
+
 export interface User {
   id: string;
   username: string;
@@ -63,6 +72,9 @@ export interface User {
   last_login_at?: string;
   created_at: string;
   updated_at?: string;
+  // Special roles
+  special_roles?: UserSpecialRole[];
+  capabilities?: string[];
 }
 
 export interface UserCard {

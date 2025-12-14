@@ -11,15 +11,21 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
   const router = useRouter();
   const { user, isAuthenticated, isLoading } = useAuthStore();
 
+  // Check if user has admin access (admin role OR has special roles with capabilities)
+  const hasAdminAccess =
+    user?.role === 'admin' ||
+    (user?.special_roles && user.special_roles.length > 0) ||
+    (user?.capabilities && user.capabilities.length > 0);
+
   useEffect(() => {
     if (!isLoading) {
       if (!isAuthenticated) {
         router.push('/admin/loginadmin');
-      } else if (user?.role !== 'admin') {
+      } else if (!hasAdminAccess) {
         router.push('/');
       }
     }
-  }, [isLoading, isAuthenticated, user, router]);
+  }, [isLoading, isAuthenticated, hasAdminAccess, router]);
 
   if (isLoading) {
     return (
@@ -32,7 +38,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
     );
   }
 
-  if (!isAuthenticated || user?.role !== 'admin') {
+  if (!isAuthenticated || !hasAdminAccess) {
     return null;
   }
 

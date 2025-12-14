@@ -8,6 +8,13 @@ export interface Tag {
   nama: string;
 }
 
+export interface Series {
+  id: string;
+  nama: string;
+  is_active: boolean;
+  created_at: string;
+}
+
 export interface ContentBlock {
   id: string;
   block_type: ContentBlockType;
@@ -71,6 +78,7 @@ export interface Portfolio {
   is_liked?: boolean;
   user?: UserCard & { kelas_nama?: string };
   tags?: Tag[];
+  series?: Series[];
   content_blocks?: ContentBlock[];
 }
 
@@ -86,5 +94,6 @@ export interface PortfolioCard {
   like_count?: number;
   user?: UserCard & { kelas_nama?: string };
   tags?: Tag[];
+  series?: Series[];
   admin_review_note?: string;
 }

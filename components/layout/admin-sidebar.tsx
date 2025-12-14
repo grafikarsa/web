@@ -10,6 +10,7 @@ import { useThemeValue } from '@/lib/hooks/use-theme-value';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 import {
   LayoutDashboard,
   Users,
@@ -22,6 +23,9 @@ import {
   MessageSquare,
   Star,
   BarChart3,
+  Layers,
+  Shield,
+  ArrowLeft,
 } from 'lucide-react';
 import api from '@/lib/api/client';
 
@@ -30,6 +34,23 @@ interface DashboardStats {
     pending_review: number;
   };
 }
+
+// Map href to capability key
+const capabilityMap: Record<string, string> = {
+  '/admin': 'dashboard',
+  '/admin/portfolios': 'portfolios',
+  '/admin/moderation': 'moderation',
+  '/admin/assessments': 'assessments',
+  '/admin/assessment-metrics': 'assessment_metrics',
+  '/admin/tags': 'tags',
+  '/admin/series': 'series',
+  '/admin/users': 'users',
+  '/admin/special-roles': 'special_roles',
+  '/admin/majors': 'majors',
+  '/admin/classes': 'classes',
+  '/admin/academic-years': 'academic_years',
+  '/admin/feedback': 'feedback',
+};
 
 // Navigation sections with grouped items and icon colors
 const navSections = [
@@ -47,12 +68,14 @@ const navSections = [
       { href: '/admin/assessments', label: 'Penilaian', icon: Star, iconColor: 'text-yellow-500' },
       { href: '/admin/assessment-metrics', label: 'Metrik Penilaian', icon: BarChart3, iconColor: 'text-indigo-500' },
       { href: '/admin/tags', label: 'Tags', icon: Tags, iconColor: 'text-pink-500' },
+      { href: '/admin/series', label: 'Series', icon: Layers, iconColor: 'text-blue-500' },
     ],
   },
   {
     title: 'Pengguna',
     items: [
       { href: '/admin/users', label: 'Users', icon: Users, iconColor: 'text-violet-500' },
+      { href: '/admin/special-roles', label: 'Special Roles', icon: Shield, iconColor: 'text-amber-500' },
     ],
   },
   {
@@ -76,6 +99,10 @@ export function AdminSidebar() {
   const { user } = useAuthStore();
   const { theme, mounted } = useThemeValue();
 
+  // Check if user is full admin or has special roles
+  const isFullAdmin = user?.role === 'admin';
+  const userCapabilities = user?.capabilities || [];
+
   // Fetch pending count for badge
   const { data: stats } = useQuery({
     queryKey: ['admin-sidebar-stats'],
@@ -84,6 +111,7 @@ export function AdminSidebar() {
       return response.data.data;
     },
     refetchInterval: 60000, // Refresh every minute
+    enabled: isFullAdmin || userCapabilities.includes('dashboard') || userCapabilities.includes('moderation'),
   });
 
   const pendingCount = stats?.portfolios?.pending_review || 0;
@@ -92,6 +120,21 @@ export function AdminSidebar() {
     if (exact) return pathname === href;
     return pathname === href || pathname.startsWith(href + '/');
   };
+
+  // Check if user has access to a menu item
+  const hasAccess = (href: string): boolean => {
+    if (isFullAdmin) return true;
+    const capability = capabilityMap[href];
+    return capability ? userCapabilities.includes(capability) : false;
+  };
+
+  // Filter sections based on user capabilities
+  const filteredSections = navSections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => hasAccess(item.href)),
+    }))
+    .filter((section) => section.items.length > 0);
 
   const logoSrc =
     theme === 'dark'
@@ -114,13 +157,24 @@ export function AdminSidebar() {
           )}
           <div>
             <h1 className="text-sm font-semibold">Grafikarsa</h1>
-            <p className="text-[10px] text-muted-foreground">Admin Panel</p>
+            <p className="text-[10px] text-muted-foreground">
+              {isFullAdmin ? 'Admin Panel' : 'Limited Access'}
+            </p>
           </div>
         </div>
 
+        {/* Limited Access Badge */}
+        {!isFullAdmin && (
+          <div className="border-b px-4 py-2">
+            <Badge variant="outline" className="w-full justify-center text-xs">
+              Akses Terbatas
+            </Badge>
+          </div>
+        )}
+
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-2 py-3">
-          {navSections.map((section, sectionIndex) => (
+          {filteredSections.map((section, sectionIndex) => (
             <div key={section.title} className={cn(sectionIndex > 0 && 'mt-4')}>
               <h2 className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                 {section.title}
@@ -161,6 +215,18 @@ export function AdminSidebar() {
         </nav>
 
         <Separator />
+
+        {/* Back to Main Site (for non-admin users) */}
+        {!isFullAdmin && (
+          <div className="border-b p-2">
+            <Button variant="ghost" size="sm" className="w-full justify-start gap-2" asChild>
+              <Link href="/">
+                <ArrowLeft className="h-4 w-4" />
+                Kembali ke Beranda
+              </Link>
+            </Button>
+          </div>
+        )}
 
         {/* User Profile */}
         <div className="p-2">

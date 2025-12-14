@@ -14,12 +14,14 @@ interface PortfoliosParams extends PaginationParams {
 interface CreatePortfolioRequest {
   judul: string;
   tag_ids?: string[];
+  series_ids?: string[];
 }
 
 interface UpdatePortfolioRequest {
   judul?: string;
   thumbnail_url?: string;
   tag_ids?: string[];
+  series_ids?: string[];
 }
 
 interface LikeResponse {

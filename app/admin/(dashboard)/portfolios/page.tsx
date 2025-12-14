@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -83,12 +83,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
-import { adminPortfoliosApi, adminUsersApi, adminTagsApi, uploadsApi } from '@/lib/api/admin';
+import { adminPortfoliosApi, adminUsersApi, adminTagsApi, adminSeriesApi, uploadsApi } from '@/lib/api/admin';
 import { portfoliosApi } from '@/lib/api';
 import {
   PortfolioCard,
   Portfolio,
   Tag,
+  Series,
   User as UserType,
   PortfolioStatus,
   ContentBlockType,
@@ -546,6 +547,7 @@ function PortfolioFormModal({
   const [selectedStatus, setSelectedStatus] = useState<PortfolioStatus>('draft');
   const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
+  const [selectedSeries, setSelectedSeries] = useState<Series[]>([]);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
@@ -583,6 +585,13 @@ function PortfolioFormModal({
     enabled: open,
   });
 
+  // Fetch series
+  const { data: seriesData } = useQuery({
+    queryKey: ['admin-series'],
+    queryFn: () => adminSeriesApi.getSeries({ limit: 100 }),
+    enabled: open,
+  });
+
   // Fetch portfolio detail for edit
   const { data: detailData } = useQuery({
     queryKey: ['portfolio-edit-detail', portfolio?.id],
@@ -596,6 +605,7 @@ function PortfolioFormModal({
     setSelectedStatus('draft');
     setSelectedUser(null);
     setSelectedTags([]);
+    setSelectedSeries([]);
     setThumbnailFile(null);
     setThumbnailPreview(null);
     setThumbnailUrl(null);
@@ -611,6 +621,7 @@ function PortfolioFormModal({
       setJudul(portfolio.judul);
       setSelectedStatus(portfolio.status || 'draft');
       setSelectedTags(portfolio.tags || []);
+      setSelectedSeries(portfolio.series || []);
       setThumbnailUrl(portfolio.thumbnail_url || null);
       if (detailData?.data?.content_blocks) {
         setContentBlocks(
@@ -631,9 +642,33 @@ function PortfolioFormModal({
   const users = usersData?.data || [];
   const tags = tagsData?.data || [];
 
+  // Merge active series with portfolio's existing series (including inactive ones)
+  const seriesList = useMemo(() => {
+    const activeSeries = seriesData?.data || [];
+    const portfolioSeries = portfolio?.series || [];
+
+    // Create a map of series by ID
+    const seriesMap = new Map(activeSeries.map((s) => [s.id, s]));
+
+    // Add portfolio's series that are not in active list (inactive series)
+    portfolioSeries.forEach((s) => {
+      if (!seriesMap.has(s.id)) {
+        seriesMap.set(s.id, s);
+      }
+    });
+
+    return Array.from(seriesMap.values());
+  }, [seriesData?.data, portfolio?.series]);
+
   const toggleTag = (tag: Tag) => {
     setSelectedTags((prev) =>
       prev.some((t) => t.id === tag.id) ? prev.filter((t) => t.id !== tag.id) : [...prev, tag]
+    );
+  };
+
+  const toggleSeries = (s: Series) => {
+    setSelectedSeries((prev) =>
+      prev.some((item) => item.id === s.id) ? prev.filter((item) => item.id !== s.id) : [...prev, s]
     );
   };
 
@@ -736,6 +771,7 @@ function PortfolioFormModal({
           judul: judul.trim(),
           status: selectedStatus,
           tag_ids: selectedTags.map((t) => t.id),
+          series_ids: selectedSeries.map((s) => s.id),
         });
       } else {
         setSubmitProgress('Membuat portfolio...');
@@ -748,7 +784,9 @@ function PortfolioFormModal({
         portfolioId = createRes.data.id;
         // Set status after creation if not draft
         if (selectedStatus !== 'draft') {
-          await adminPortfoliosApi.updatePortfolio(portfolioId, { status: selectedStatus });
+          await adminPortfoliosApi.updatePortfolio(portfolioId, { status: selectedStatus, series_ids: selectedSeries.map((s) => s.id) });
+        } else if (selectedSeries.length > 0) {
+          await adminPortfoliosApi.updatePortfolio(portfolioId, { series_ids: selectedSeries.map((s) => s.id) });
         }
       }
 
@@ -1020,6 +1058,42 @@ function PortfolioFormModal({
                         onClick={() => toggleTag(tag)}
                       >
                         {tag.nama}
+                        {isSelected && <X className="ml-1 h-3 w-3" />}
+                      </Badge>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Series */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Series</Label>
+              <div className="flex flex-wrap gap-2 rounded-lg border bg-muted/30 p-3">
+                {seriesList.length === 0 ? (
+                  <span className="text-sm text-muted-foreground">Tidak ada series</span>
+                ) : (
+                  seriesList.map((s) => {
+                    const isSelected = selectedSeries.some((item) => item.id === s.id);
+                    const isInactive = !s.is_active;
+                    return (
+                      <Badge
+                        key={s.id}
+                        variant={isSelected ? 'default' : 'outline'}
+                        className={`cursor-pointer ${
+                          isSelected
+                            ? isInactive
+                              ? 'bg-blue-400/70 hover:bg-blue-500/70'
+                              : 'bg-blue-500 hover:bg-blue-600'
+                            : isInactive
+                              ? 'opacity-60'
+                              : ''
+                        }`}
+                        onClick={() => toggleSeries(s)}
+                        title={isInactive ? 'Series ini sudah tidak aktif' : undefined}
+                      >
+                        {s.nama}
+                        {isInactive && <span className="ml-1 text-xs opacity-70">(nonaktif)</span>}
                         {isSelected && <X className="ml-1 h-3 w-3" />}
                       </Badge>
                     );
