@@ -1,7 +1,14 @@
 {
-  "name": "web",
+  "name": "grafikarsa-web",
   "version": "0.1.0",
+  "description": "Grafikarsa Web Client - Platform Katalog Portofolio SMKN 4 Malang",
   "private": true,
+  "author": "Rafa Pradana <rafapradana.com@gmail.com>",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rafapradana/grafikarsa-web.git"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
