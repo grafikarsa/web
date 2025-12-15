@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Output standalone for Docker deployment
+  output: "standalone",
   typescript: {
     // Skip TypeScript errors during build for faster deployment
     ignoreBuildErrors: true,

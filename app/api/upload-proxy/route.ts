@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Edge Runtime for Cloudflare Pages
-export const runtime = 'edge';
-
 /**
  * Proxy endpoint for uploading files to MinIO
  * This bypasses CORS issues when uploading directly from browser to MinIO
@@ -25,7 +22,7 @@ export async function PUT(request: NextRequest) {
     const body = await request.arrayBuffer();
     console.log('Body size:', body.byteLength);
 
-    // Use fetch API (Edge Runtime compatible)
+    // Use fetch API
     const response = await fetch(presignedUrl, {
       method: 'PUT',
       headers: {
