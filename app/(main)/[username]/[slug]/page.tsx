@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import { Heart, Share2, Calendar, Edit, ArrowLeft, Eye, Clock, AlertCircle } from 'lucide-react';
+import { Heart, Share2, Calendar, Edit, ArrowLeft, Clock, AlertCircle } from 'lucide-react';
 
 import { formatDate, formatDistanceToNow } from '@/lib/utils/format';
 import { toast } from 'sonner';
@@ -229,12 +229,7 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
               <Calendar className="h-4 w-4" />
               {formatDate(portfolio.published_at || portfolio.created_at)}
             </span>
-            {portfolio.view_count !== undefined && (
-              <span className="flex items-center gap-1.5">
-                <Eye className="h-4 w-4" />
-                {portfolio.view_count} views
-              </span>
-            )}
+
           </div>
         </div>
 
