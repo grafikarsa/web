@@ -26,6 +26,24 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "cdn.grafikarsa.com",
       },
+      {
+        protocol: "https",
+        hostname: "storage.rafapradana.com",
+      },
+      {
+        protocol: "https",
+        hostname: "cdn.rafapradana.com",
+      },
+      {
+        protocol: "http",
+        hostname: "grafikarsa.jh-beon.cloud",
+        port: "9000",
+      },
+      {
+        protocol: "https",
+        hostname: "grafikarsa.jh-beon.cloud",
+        port: "9000",
+      },
       // Development MinIO
       {
         protocol: "http",
