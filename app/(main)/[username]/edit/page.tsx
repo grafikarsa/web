@@ -1,5 +1,7 @@
 'use client';
 
+export const runtime = 'edge';
+
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/lib/stores/auth-store';

@@ -1,5 +1,7 @@
 'use client';
 
+export const runtime = 'edge';
+
 import { useQuery } from '@tanstack/react-query';
 import { usersApi, portfoliosApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/stores/auth-store';
