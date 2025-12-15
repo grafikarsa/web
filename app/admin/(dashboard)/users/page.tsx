@@ -67,7 +67,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { adminUsersApi, adminMajorsApi, adminClassesApi, uploadsApi, adminSpecialRolesApi } from '@/lib/api/admin';
-import { User, SpecialRole, generateBgColor } from '@/lib/types';
+import { User, UserRole, SpecialRole, generateBgColor } from '@/lib/types';
 import { useDebounce } from '@/lib/hooks/use-debounce';
 import { formatDate } from '@/lib/utils/format';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -343,7 +343,7 @@ export default function AdminUsersPage() {
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
-                          onClick={() => toggleActiveMutation.mutate({ id: user.id, isActive: user.is_active })}
+                          onClick={() => toggleActiveMutation.mutate({ id: user.id, isActive: user.is_active ?? false })}
                           disabled={toggleActiveMutation.isPending}
                         >
                           {user.is_active ? (
@@ -703,7 +703,7 @@ function UserFormModal({
     username: '',
     email: '',
     password: '',
-    role: 'student',
+    role: 'student' as UserRole,
     nisn: '',
     nis: '',
     kelas_id: '',
@@ -725,7 +725,7 @@ function UserFormModal({
   // Fetch active special roles
   const { data: specialRolesData } = useQuery({
     queryKey: ['admin-special-roles-active'],
-    queryFn: () => adminSpecialRolesApi.getSpecialRoles({ is_active: true, limit: 100 }),
+    queryFn: () => adminSpecialRolesApi.getActiveSpecialRoles(),
     enabled: open,
   });
 
@@ -953,11 +953,10 @@ function UserFormModal({
           role: formData.role,
           nisn: formData.nisn || undefined,
           nis: formData.nis || undefined,
-          kelas_id: formData.role === 'alumni' ? undefined : (formData.kelas_id || undefined),
           tahun_masuk: formData.tahun_masuk,
           avatar_url: formData.avatar_url || undefined,
           banner_url: formData.banner_url || undefined,
-        });
+        } as Parameters<typeof adminUsersApi.createUser>[0]);
         toast.success('User berhasil dibuat');
       }
       onSuccess();
@@ -1100,7 +1099,7 @@ function UserFormModal({
               <Label htmlFor="role">Role *</Label>
               <Select
                 value={formData.role}
-                onValueChange={(v) => setFormData({ ...formData, role: v })}
+                onValueChange={(v) => setFormData({ ...formData, role: v as UserRole })}
               >
                 <SelectTrigger>
                   <SelectValue />

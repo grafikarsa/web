@@ -285,22 +285,22 @@ export default function ImportStudentsPage() {
                 <p className="text-sm text-muted-foreground">Siswa Valid</p>
               </div>
               <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <p className="text-2xl font-bold text-blue-600">{dryRunResult.classes_to_create.length}</p>
+                <p className="text-2xl font-bold text-blue-600">{dryRunResult.classes_to_create?.length ?? 0}</p>
                 <p className="text-sm text-muted-foreground">Kelas Baru</p>
               </div>
               <div className="text-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                <p className="text-2xl font-bold text-red-600">{dryRunResult.validation_errors.length}</p>
+                <p className="text-2xl font-bold text-red-600">{dryRunResult.validation_errors?.length ?? 0}</p>
                 <p className="text-sm text-muted-foreground">Error</p>
               </div>
             </div>
 
-            {dryRunResult.classes_to_create.length > 0 && (
+            {(dryRunResult.classes_to_create?.length ?? 0) > 0 && (
               <>
                 <Separator />
                 <div>
                   <h4 className="font-medium mb-2">Kelas yang akan dibuat:</h4>
                   <div className="flex flex-wrap gap-2">
-                    {dryRunResult.classes_to_create.map((kelas, i) => (
+                    {dryRunResult.classes_to_create?.map((kelas, i) => (
                       <Badge key={i} variant="secondary">
                         {kelas.nama}
                       </Badge>
@@ -310,11 +310,11 @@ export default function ImportStudentsPage() {
               </>
             )}
 
-            {dryRunResult.validation_errors.length > 0 && (
+            {(dryRunResult.validation_errors?.length ?? 0) > 0 && (
               <>
                 <Separator />
                 <div>
-                  <h4 className="font-medium mb-2 text-red-600">Error ({dryRunResult.validation_errors.length}):</h4>
+                  <h4 className="font-medium mb-2 text-red-600">Error ({dryRunResult.validation_errors?.length ?? 0}):</h4>
                   <div className="max-h-60 overflow-y-auto">
                     <Table>
                       <TableHeader>
@@ -326,7 +326,7 @@ export default function ImportStudentsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {dryRunResult.validation_errors.map((err, i) => (
+                        {dryRunResult.validation_errors?.map((err, i) => (
                           <TableRow key={i}>
                             <TableCell>{err.row}</TableCell>
                             <TableCell>{err.nis || '-'}</TableCell>
@@ -369,11 +369,11 @@ export default function ImportStudentsPage() {
               </div>
             </div>
 
-            {importResult.errors.length > 0 && (
+            {(importResult.errors?.length ?? 0) > 0 && (
               <div className="mt-4">
                 <p className="font-medium text-amber-600 mb-2">Baris yang dilewati:</p>
                 <div className="max-h-40 overflow-y-auto text-sm">
-                  {importResult.errors.map((err, i) => (
+                  {importResult.errors?.map((err, i) => (
                     <p key={i}>
                       Baris {err.row}: {err.error}
                     </p>
