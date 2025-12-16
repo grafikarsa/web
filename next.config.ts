@@ -21,11 +21,16 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "images.unsplash.com",
       },
-      // Production MinIO/CDN
+      // Production MinIO/CDN - Generic (ganti sesuai domain)
       {
         protocol: "https",
         hostname: "cdn.grafikarsa.com",
       },
+      {
+        protocol: "https",
+        hostname: "storage.grafikarsa.com",
+      },
+      // Jelastic deployment
       {
         protocol: "https",
         hostname: "storage.rafapradana.com",
