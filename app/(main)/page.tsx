@@ -2,7 +2,7 @@
 
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { HeroSection, AboutSection, FaqSection, TopStudentsSection, TopProjectsSection } from '@/components/landing';
-import { FeedList } from '@/components/feed/feed-list';
+import { SmartFeedList } from '@/components/feed/smart-feed-list';
 
 export default function HomePage() {
   const { isAuthenticated } = useAuthStore();
@@ -19,5 +19,5 @@ export default function HomePage() {
     );
   }
 
-  return <FeedList />;
+  return <SmartFeedList />;
 }

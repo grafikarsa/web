@@ -4,3 +4,4 @@ export * from './api';
 export * from './assessment';
 export * from './notification';
 export * from './special-role';
+export * from './feed';
