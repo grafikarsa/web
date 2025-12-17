@@ -2,9 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import {
   Tooltip,
   TooltipContent,
@@ -16,7 +18,48 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { Home, Plus, Search, Settings, Users, FolderOpen } from 'lucide-react';
+import { Home, Plus, Search, Users, FolderOpen, History } from 'lucide-react';
+import { getUnreadCount } from '@/lib/api/changelog';
+import { NotificationBell } from '@/components/notifications/notification-bell';
+
+function ChangelogNavItem({ pathname }: { pathname: string }) {
+  const { data } = useQuery({
+    queryKey: ['changelog-unread-count'],
+    queryFn: () => getUnreadCount(),
+    refetchInterval: 60000, // Refresh every minute
+  });
+
+  const unreadCount = data?.data?.count || 0;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Link
+          href="/changelog"
+          className={cn(
+            'relative flex h-10 w-10 items-center justify-center rounded-lg transition-all',
+            pathname === '/changelog'
+              ? 'bg-muted text-foreground'
+              : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+          )}
+        >
+          <History className="h-5 w-5" />
+          {unreadCount > 0 && (
+            <Badge
+              variant="destructive"
+              className="absolute -right-1 -top-1 h-4 min-w-4 justify-center px-1 text-[10px]"
+            >
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </Badge>
+          )}
+        </Link>
+      </TooltipTrigger>
+      <TooltipContent side="right">
+        Changelog {unreadCount > 0 && `(${unreadCount} baru)`}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 export function StudentSidebar() {
   const pathname = usePathname();
@@ -39,23 +82,10 @@ export function StudentSidebar() {
   return (
     <TooltipProvider delayDuration={0}>
       <aside className="fixed left-0 top-0 z-40 flex h-screen w-16 flex-col items-center border-r bg-muted/40 py-4">
-        {/* User Avatar - Top */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Link
-              href={`/${user?.username}`}
-              className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:opacity-80"
-            >
-              <Avatar className="h-9 w-9 cursor-pointer border-2 border-transparent transition-all hover:border-primary">
-                <AvatarImage src={user?.avatar_url} alt={user?.nama} />
-                <AvatarFallback className="bg-primary text-sm font-medium text-primary-foreground">
-                  {user?.nama?.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            </Link>
-          </TooltipTrigger>
-          <TooltipContent side="right">Profil Saya</TooltipContent>
-        </Tooltip>
+        {/* Notification Bell - Top */}
+        <div className="flex h-10 w-10 items-center justify-center">
+          <NotificationBell />
+        </div>
 
         {/* Navigation - Centered */}
         <nav className="flex flex-1 flex-col items-center justify-center gap-2">
@@ -129,17 +159,26 @@ export function StudentSidebar() {
           </Popover>
         </nav>
 
-        {/* Settings - Bottom */}
+        {/* User Avatar - Above Changelog */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
-              className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground"
+            <Link
+              href={`/${user?.username}`}
+              className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:opacity-80"
             >
-              <Settings className="h-5 w-5" />
-            </button>
+              <Avatar className="h-9 w-9 cursor-pointer border-2 border-transparent transition-all hover:border-primary">
+                <AvatarImage src={user?.avatar_url} alt={user?.nama} />
+                <AvatarFallback className="bg-primary text-sm font-medium text-primary-foreground">
+                  {user?.nama?.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            </Link>
           </TooltipTrigger>
-          <TooltipContent side="right">Pengaturan</TooltipContent>
+          <TooltipContent side="right">Profil Saya</TooltipContent>
         </Tooltip>
+
+        {/* Changelog - Bottom */}
+        <ChangelogNavItem pathname={pathname} />
       </aside>
     </TooltipProvider>
   );

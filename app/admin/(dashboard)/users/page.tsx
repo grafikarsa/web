@@ -99,11 +99,11 @@ const roleIcons: Record<string, React.ReactNode> = {
 
 export default function AdminUsersPage() {
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
-  const debouncedSearch = useDebounce(search, 300);
 
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -112,12 +112,23 @@ export default function AdminUsersPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
 
+  const handleSearch = () => {
+    setSearchQuery(searchInput);
+    setPage(1);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
   // Fetch users
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-users', debouncedSearch, roleFilter, statusFilter, page],
+    queryKey: ['admin-users', searchQuery, roleFilter, statusFilter, page],
     queryFn: () =>
       adminUsersApi.getUsers({
-        search: debouncedSearch || undefined,
+        search: searchQuery || undefined,
         role: roleFilter === 'all' ? undefined : roleFilter,
         is_active: statusFilter === 'all' ? undefined : statusFilter === 'active',
         page,
@@ -190,25 +201,15 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      {/* Action Button */}
-      <div className="flex justify-end">
-        <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Tambah User
-        </Button>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col gap-4 sm:flex-row">
-        <div className="relative flex-1">
+      {/* Search, Filters, and Action Button in same row */}
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Cari nama, username, email..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={handleKeyDown}
             className="pl-9"
           />
         </div>
@@ -219,7 +220,7 @@ export default function AdminUsersPage() {
             setPage(1);
           }}
         >
-          <SelectTrigger className="w-full sm:w-40">
+          <SelectTrigger className="w-40">
             <SelectValue placeholder="Filter role" />
           </SelectTrigger>
           <SelectContent>
@@ -237,7 +238,7 @@ export default function AdminUsersPage() {
             setPage(1);
           }}
         >
-          <SelectTrigger className="w-full sm:w-40">
+          <SelectTrigger className="w-40">
             <SelectValue placeholder="Filter status" />
           </SelectTrigger>
           <SelectContent>
@@ -248,6 +249,14 @@ export default function AdminUsersPage() {
             ))}
           </SelectContent>
         </Select>
+        <Button variant="secondary" onClick={handleSearch}>
+          <Search className="mr-2 h-4 w-4" />
+          Cari
+        </Button>
+        <Button onClick={() => setShowCreateModal(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Tambah User
+        </Button>
       </div>
 
       {/* Table */}
@@ -259,17 +268,18 @@ export default function AdminUsersPage() {
             </div>
             <h3 className="mt-4 text-lg font-semibold">Tidak ada user</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              {search || roleFilter !== 'all' || statusFilter !== 'all'
+              {searchQuery || roleFilter !== 'all' || statusFilter !== 'all'
                 ? 'Tidak ada user yang sesuai filter'
                 : 'Belum ada user terdaftar'}
             </p>
           </div>
         </Card>
       ) : (
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden p-0">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
+                <TableHead className="w-12 text-center">#</TableHead>
                 <TableHead className="w-[300px]">User</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Kelas</TableHead>
@@ -279,8 +289,11 @@ export default function AdminUsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
+              {users.map((user, index) => (
                 <TableRow key={user.id} className="group">
+                  <TableCell className="text-center text-muted-foreground">
+                    {(page - 1) * 15 + index + 1}
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10 border">
@@ -666,10 +679,10 @@ function UserDetailModal({
 
               {/* Actions */}
               <div className="mt-6 flex justify-between border-t pt-4">
-                <Link href={`/${detail.username}`} target="_blank">
+                <Link href={`/${detail.username}`}>
                   <Button variant="outline" size="sm">
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    Lihat Profil Publik
+                    <Eye className="mr-2 h-4 w-4" />
+                    Lihat Profil
                   </Button>
                 </Link>
                 <Button size="sm" onClick={onEdit}>

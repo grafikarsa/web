@@ -441,9 +441,8 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
       queryClient.invalidateQueries({ queryKey: ['portfolio'] });
       queryClient.invalidateQueries({ queryKey: ['my-portfolios'] });
 
-      if (!isEdit || submitForReview) {
-        router.push(`/${user?.username}`);
-      }
+      // Always redirect to profile after save/submit
+      router.push(`/${user?.username}`);
     } catch (error) {
       console.error(error);
       toast.error('Gagal menyimpan portfolio');
@@ -472,13 +471,22 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
         : portfoliosApi.archivePortfolio(portfolio!.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['portfolio'] });
+      queryClient.invalidateQueries({ queryKey: ['my-portfolios'] });
       toast.success(portfolio?.status === 'archived' ? 'Portfolio diaktifkan kembali' : 'Portfolio diarsipkan');
+      // Redirect to profile after archive/unarchive
+      router.push(`/${user?.username}`);
     },
     onError: () => toast.error('Gagal mengubah status'),
   });
 
   const displayThumbnail = thumbnailPreview || thumbnailUrl;
-  const canSubmitForReview = !isEdit || portfolio?.status === 'draft' || portfolio?.status === 'rejected';
+  // Show submit button: always for new portfolio, or for edit if status is draft/rejected/published
+  // Published portfolios can be edited and re-submitted for moderation
+  const canSubmitForReview =
+    !isEdit ||
+    portfolio?.status === 'draft' ||
+    portfolio?.status === 'rejected' ||
+    portfolio?.status === 'published';
   const canDelete = isEdit && portfolio?.status === 'draft';
   const canArchive = isEdit && (portfolio?.status === 'published' || portfolio?.status === 'archived');
   const status = portfolio?.status ? statusConfig[portfolio.status] : null;

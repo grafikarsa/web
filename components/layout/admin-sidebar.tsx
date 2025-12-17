@@ -27,6 +27,7 @@ import {
   Shield,
   ArrowLeft,
   Upload,
+  History,
 } from 'lucide-react';
 import api from '@/lib/api/client';
 
@@ -52,10 +53,26 @@ const capabilityMap: Record<string, string> = {
   '/admin/classes': 'classes',
   '/admin/academic-years': 'academic_years',
   '/admin/feedback': 'feedback',
+  '/admin/changelogs': 'changelog',
 };
 
+// Navigation item type
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  iconColor: string;
+  exact?: boolean;
+  badge?: 'pending' | 'assessment';
+}
+
+interface NavSection {
+  title: string;
+  items: NavItem[];
+}
+
 // Navigation sections with grouped items and icon colors
-const navSections = [
+const navSections: NavSection[] = [
   {
     title: 'Overview',
     items: [
@@ -67,7 +84,7 @@ const navSections = [
     items: [
       { href: '/admin/portfolios', label: 'Portfolios', icon: FolderOpen, iconColor: 'text-emerald-500' },
       { href: '/admin/moderation', label: 'Moderasi', icon: ClipboardCheck, iconColor: 'text-orange-500', badge: 'pending' },
-      { href: '/admin/assessments', label: 'Penilaian', icon: Star, iconColor: 'text-yellow-500' },
+      { href: '/admin/assessments', label: 'Penilaian', icon: Star, iconColor: 'text-yellow-500', badge: 'assessment' },
       { href: '/admin/assessment-metrics', label: 'Metrik Penilaian', icon: BarChart3, iconColor: 'text-indigo-500' },
       { href: '/admin/tags', label: 'Tags', icon: Tags, iconColor: 'text-pink-500' },
       { href: '/admin/series', label: 'Series', icon: Layers, iconColor: 'text-blue-500' },
@@ -93,6 +110,7 @@ const navSections = [
     title: 'Lainnya',
     items: [
       { href: '/admin/feedback', label: 'Feedback', icon: MessageSquare, iconColor: 'text-teal-500' },
+      { href: '/admin/changelogs', label: 'Changelog', icon: History, iconColor: 'text-purple-500' },
     ],
   },
 ];
@@ -106,7 +124,7 @@ export function AdminSidebar() {
   const isFullAdmin = user?.role === 'admin';
   const userCapabilities = user?.capabilities || [];
 
-  // Fetch pending count for badge
+  // Fetch pending count for moderation badge
   const { data: stats } = useQuery({
     queryKey: ['admin-sidebar-stats'],
     queryFn: async () => {
@@ -117,7 +135,19 @@ export function AdminSidebar() {
     enabled: isFullAdmin || userCapabilities.includes('dashboard') || userCapabilities.includes('moderation'),
   });
 
+  // Fetch assessment stats for badge
+  const { data: assessmentStats } = useQuery({
+    queryKey: ['admin-sidebar-assessment-stats'],
+    queryFn: async () => {
+      const response = await api.get<{ data: { total_published: number; assessed: number; pending: number } }>('/admin/assessments/stats');
+      return response.data.data;
+    },
+    refetchInterval: 60000,
+    enabled: isFullAdmin || userCapabilities.includes('assessments'),
+  });
+
   const pendingCount = stats?.portfolios?.pending_review || 0;
+  const pendingAssessmentCount = assessmentStats?.pending || 0;
 
   const isActive = (href: string, exact?: boolean) => {
     if (exact) return pathname === href;
@@ -207,6 +237,14 @@ export function AdminSidebar() {
                           className="h-4 min-w-4 justify-center px-1 text-[10px]"
                         >
                           {pendingCount > 99 ? '99+' : pendingCount}
+                        </Badge>
+                      )}
+                      {item.badge === 'assessment' && pendingAssessmentCount > 0 && (
+                        <Badge
+                          variant="destructive"
+                          className="h-4 min-w-4 justify-center px-1 text-[10px]"
+                        >
+                          {pendingAssessmentCount > 9999 ? '9999+' : pendingAssessmentCount}
                         </Badge>
                       )}
                     </Link>

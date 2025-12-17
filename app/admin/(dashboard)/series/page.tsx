@@ -18,6 +18,7 @@ import {
   ChevronDown,
   ChevronUp,
   FileDown,
+  Search,
 } from 'lucide-react';
 
 // Dynamic import for PDF export modal (client-side only)
@@ -48,11 +49,11 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { DataTable, Column } from '@/components/admin/data-table';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { adminSeriesApi } from '@/lib/api/admin';
 import { Series, SeriesDetail, ContentBlockType } from '@/lib/types';
-import { useDebounce } from '@/lib/hooks/use-debounce';
 
 const BLOCK_TYPES: { value: ContentBlockType; label: string; icon: React.ReactNode; description: string }[] = [
   { value: 'text', label: 'Text', icon: <FileText className="h-4 w-4" />, description: 'Konten teks/paragraf' },
@@ -74,18 +75,28 @@ function getBlockLabel(type: ContentBlockType) {
 
 export default function AdminSeriesPage() {
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [editSeriesId, setEditSeriesId] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deleteSeries, setDeleteSeries] = useState<Series | null>(null);
   const [previewSeriesId, setPreviewSeriesId] = useState<string | null>(null);
   const [exportSeries, setExportSeries] = useState<Series | null>(null);
-  const debouncedSearch = useDebounce(search, 300);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-series', debouncedSearch],
-    queryFn: () => adminSeriesApi.getSeries({ search: debouncedSearch || undefined }),
+    queryKey: ['admin-series', searchQuery],
+    queryFn: () => adminSeriesApi.getSeries({ search: searchQuery || undefined }),
   });
+
+  const handleSearch = () => {
+    setSearchQuery(searchInput);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => adminSeriesApi.deleteSeries(id),
@@ -159,7 +170,14 @@ export default function AdminSeriesPage() {
               toggleActiveMutation.mutate({ id: s.id, is_active: checked })
             }
           />
-          <Badge variant={s.is_active ? 'default' : 'secondary'}>
+          <Badge
+            variant={s.is_active ? 'default' : 'secondary'}
+            className={
+              s.is_active
+                ? 'bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400'
+                : ''
+            }
+          >
             {s.is_active ? 'Aktif' : 'Nonaktif'}
           </Badge>
         </div>
@@ -199,7 +217,22 @@ export default function AdminSeriesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
+      {/* Search and Action Button in same row */}
+      <div className="flex gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Cari series..."
+            className="pl-9"
+          />
+        </div>
+        <Button variant="secondary" onClick={handleSearch}>
+          <Search className="mr-2 h-4 w-4" />
+          Cari
+        </Button>
         <Button onClick={() => setIsCreateOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Tambah Series
@@ -210,8 +243,6 @@ export default function AdminSeriesPage() {
         data={series}
         columns={columns}
         isLoading={isLoading}
-        searchPlaceholder="Cari series..."
-        onSearch={setSearch}
         onEdit={(s) => setEditSeriesId(s.id)}
         onDelete={setDeleteSeries}
       />
@@ -435,7 +466,7 @@ function SeriesFormDialog({
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
             <div className="max-h-[60vh] overflow-y-auto pr-2 space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -478,7 +509,9 @@ function SeriesFormDialog({
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label>Template Blocks <span className="text-destructive">*</span></Label>
+                    <Label>
+                      Template Blocks <span className="text-destructive">*</span>
+                    </Label>
                     <p className="text-xs text-muted-foreground">
                       Tentukan struktur block konten untuk portofolio
                     </p>
@@ -586,7 +619,7 @@ function SeriesFormDialog({
               </div>
             </div>
 
-            <DialogFooter className="mt-6">
+            <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>
                 Batal
               </Button>
@@ -637,48 +670,50 @@ function SeriesPreviewDialog({
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : series ? (
-          <div className="max-h-[60vh] overflow-y-auto pr-2 space-y-4">
-            <div>
-              <h3 className="font-semibold text-lg">{series.nama}</h3>
-              {series.deskripsi && (
-                <p className="text-sm text-muted-foreground mt-1">{series.deskripsi}</p>
+          <ScrollArea className="max-h-[60vh] pr-2">
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold text-lg">{series.nama}</h3>
+                {series.deskripsi && (
+                  <p className="text-sm text-muted-foreground mt-1">{series.deskripsi}</p>
+                )}
+              </div>
+
+              <Separator />
+
+              {series.blocks && series.blocks.length > 0 ? (
+                <div className="space-y-3">
+                  <p className="text-sm font-medium">Template Blocks ({series.blocks.length})</p>
+                  {series.blocks.map((block, index) => (
+                    <Card key={block.id || index}>
+                      <CardContent className="pt-4 pb-4">
+                        <div className="flex items-start gap-3">
+                          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10 text-primary shrink-0">
+                            {getBlockIcon(block.block_type)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-medium text-muted-foreground">
+                                Block {index + 1}
+                              </span>
+                              <Badge variant="outline" className="text-xs">
+                                {getBlockLabel(block.block_type)}
+                              </Badge>
+                            </div>
+                            <p className="text-sm">{block.instruksi}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Series ini belum memiliki blocks
+                </p>
               )}
             </div>
-
-            <Separator />
-
-            {series.blocks && series.blocks.length > 0 ? (
-              <div className="space-y-3">
-                <p className="text-sm font-medium">Template Blocks ({series.blocks.length})</p>
-                {series.blocks.map((block, index) => (
-                  <Card key={block.id || index}>
-                    <CardContent className="pt-4 pb-4">
-                      <div className="flex items-start gap-3">
-                        <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10 text-primary shrink-0">
-                          {getBlockIcon(block.block_type)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-medium text-muted-foreground">
-                              Block {index + 1}
-                            </span>
-                            <Badge variant="outline" className="text-xs">
-                              {getBlockLabel(block.block_type)}
-                            </Badge>
-                          </div>
-                          <p className="text-sm">{block.instruksi}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                Series ini belum memiliki blocks
-              </p>
-            )}
-          </div>
+          </ScrollArea>
         ) : (
           <p className="text-sm text-muted-foreground text-center py-8">
             Series tidak ditemukan

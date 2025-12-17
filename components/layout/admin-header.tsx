@@ -12,10 +12,17 @@ const pageTitles: Record<string, string> = {
   '/admin/users': 'Kelola Users',
   '/admin/portfolios': 'Kelola Portfolio',
   '/admin/moderation': 'Moderasi Portfolio',
+  '/admin/assessments': 'Penilaian Portfolio',
+  '/admin/assessment-metrics': 'Metrik Penilaian',
   '/admin/majors': 'Kelola Jurusan',
   '/admin/classes': 'Kelola Kelas',
   '/admin/academic-years': 'Kelola Tahun Ajaran',
   '/admin/tags': 'Kelola Tags',
+  '/admin/series': 'Kelola Series',
+  '/admin/special-roles': 'Special Roles',
+  '/admin/changelogs': 'Kelola Changelog',
+  '/admin/feedback': 'Feedback',
+  '/admin/import': 'Import Siswa',
 };
 
 export function AdminHeader() {

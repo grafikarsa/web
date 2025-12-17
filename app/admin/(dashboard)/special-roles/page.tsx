@@ -20,7 +20,6 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-
 import { DataTable, Column } from '@/components/admin/data-table';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { adminSpecialRolesApi, adminUsersApi } from '@/lib/api/admin';
@@ -36,16 +35,26 @@ import { useDebounce } from '@/lib/hooks/use-debounce';
 
 export default function AdminSpecialRolesPage() {
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [editRole, setEditRole] = useState<SpecialRole | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deleteRole, setDeleteRole] = useState<SpecialRole | null>(null);
   const [manageUsersRole, setManageUsersRole] = useState<SpecialRole | null>(null);
-  const debouncedSearch = useDebounce(search, 300);
+
+  const handleSearch = () => {
+    setSearchQuery(searchInput);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-special-roles', debouncedSearch],
-    queryFn: () => adminSpecialRolesApi.getSpecialRoles({ search: debouncedSearch || undefined, include_inactive: true }),
+    queryKey: ['admin-special-roles', searchQuery],
+    queryFn: () => adminSpecialRolesApi.getSpecialRoles({ search: searchQuery || undefined, include_inactive: true }),
   });
 
   const { data: capabilitiesData } = useQuery({
@@ -156,7 +165,10 @@ export default function AdminSpecialRolesPage() {
               toggleActiveMutation.mutate({ id: r.id, is_active: checked })
             }
           />
-          <Badge variant={r.is_active ? 'default' : 'secondary'}>
+          <Badge
+            variant={r.is_active ? 'default' : 'secondary'}
+            className={r.is_active ? 'bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400' : ''}
+          >
             {r.is_active ? 'Aktif' : 'Nonaktif'}
           </Badge>
         </div>
@@ -166,7 +178,22 @@ export default function AdminSpecialRolesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
+      {/* Search and Action Button in same row */}
+      <div className="flex gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Cari special role..."
+            className="pl-9"
+          />
+        </div>
+        <Button variant="secondary" onClick={handleSearch}>
+          <Search className="mr-2 h-4 w-4" />
+          Cari
+        </Button>
         <Button onClick={() => setIsCreateOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Tambah Special Role
@@ -177,8 +204,6 @@ export default function AdminSpecialRolesPage() {
         data={roles}
         columns={columns}
         isLoading={isLoading}
-        searchPlaceholder="Cari special role..."
-        onSearch={setSearch}
         onEdit={setEditRole}
         onDelete={setDeleteRole}
       />

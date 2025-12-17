@@ -66,11 +66,14 @@ export default function EditPortfolioPage() {
     <div className="mx-auto max-w-4xl">
       {/* Header */}
       <div className="mb-6 flex items-center gap-4">
-        <Link href={`/${username}/${slug}`}>
-          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-10 w-10 rounded-full"
+          onClick={() => router.back()}
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
         <div className="flex items-center gap-3">
           <div className="rounded-full bg-blue-500/10 p-2">
             <Pencil className="h-5 w-5 text-blue-500" />

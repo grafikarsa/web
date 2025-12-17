@@ -550,7 +550,18 @@ export const adminAssessmentMetricsApi = {
 };
 
 // Admin Portfolio Assessments API
+interface AssessmentStatsResponse {
+  total_published: number;
+  assessed: number;
+  pending: number;
+}
+
 export const adminAssessmentsApi = {
+  getStats: async () => {
+    const response = await api.get<ApiResponse<AssessmentStatsResponse>>('/admin/assessments/stats');
+    return response.data;
+  },
+
   getPortfolios: async (params?: PaginationParams & { filter?: 'pending' | 'assessed' | 'all'; search?: string }) => {
     const response = await api.get<ApiResponse<PortfolioForAssessment[]>>('/admin/assessments', { params });
     return response.data;

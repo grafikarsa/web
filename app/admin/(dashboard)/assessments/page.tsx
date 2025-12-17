@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -84,6 +85,12 @@ export default function AdminAssessmentsPage() {
       }),
   });
 
+  // Fetch stats for accurate counts
+  const { data: statsData } = useQuery({
+    queryKey: ['admin-assessment-stats'],
+    queryFn: () => adminAssessmentsApi.getStats(),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (portfolioId: string) => adminAssessmentsApi.deleteAssessment(portfolioId),
     onSuccess: () => {
@@ -96,11 +103,12 @@ export default function AdminAssessmentsPage() {
 
   const portfolios = data?.data || [];
   const pagination = data?.meta;
+  const stats = statsData?.data;
 
-  // Stats
-  const totalCount = pagination?.total_count || 0;
-  const assessedCount = portfolios.filter((p) => p.assessment).length;
-  const pendingCount = portfolios.filter((p) => !p.assessment).length;
+  // Stats - use stats endpoint for accurate totals
+  const totalCount = stats?.total_published || pagination?.total_count || 0;
+  const assessedCount = stats?.assessed || 0;
+  const pendingCount = stats?.pending || 0;
 
   if (isLoading) {
     return (
@@ -123,7 +131,6 @@ export default function AdminAssessmentsPage() {
   if (isError) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Penilaian Portfolio</h1>
         <Card className="border-destructive/50 bg-destructive/5 p-8">
           <div className="flex flex-col items-center justify-center text-center">
             <AlertCircle className="h-12 w-12 text-destructive" />
@@ -142,8 +149,6 @@ export default function AdminAssessmentsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Penilaian Portfolio</h1>
-
       {/* Stats Cards */}
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="p-4">
@@ -297,9 +302,9 @@ function PortfolioCard({
   const hasAssessment = !!portfolio.assessment;
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden p-0">
       {/* Thumbnail */}
-      <div className="aspect-video bg-muted relative">
+      <div className="aspect-video bg-muted relative overflow-hidden">
         {portfolio.thumbnail_url ? (
           <img
             src={portfolio.thumbnail_url}
@@ -311,18 +316,36 @@ function PortfolioCard({
             <ClipboardList className="h-12 w-12 text-muted-foreground/50" />
           </div>
         )}
+        {/* Score Ribbon - Bookmark style with color based on score */}
         {hasAssessment && (
-          <div className="absolute top-2 right-2">
-            <Badge className="bg-green-500 hover:bg-green-500">
-              <Star className="h-3 w-3 mr-1 fill-current" />
-              {portfolio.assessment?.total_score?.toFixed(1) || '-'}
-            </Badge>
+          <div className="absolute right-3 -top-0.5">
+            <div className="relative">
+              {/* Ribbon body */}
+              <div 
+                className={cn(
+                  "px-2.5 pt-2 pb-4 shadow-lg flex flex-col items-center",
+                  (portfolio.assessment?.total_score ?? 0) < 4 
+                    ? "bg-red-500" 
+                    : (portfolio.assessment?.total_score ?? 0) <= 7 
+                      ? "bg-amber-500" 
+                      : "bg-green-500"
+                )}
+                style={{
+                  clipPath: 'polygon(0 0, 100% 0, 100% 100%, 50% 85%, 0 100%)',
+                }}
+              >
+                <Star className="h-4 w-4 text-white fill-white" />
+                <span className="text-white text-sm font-bold mt-0.5">
+                  {portfolio.assessment?.total_score?.toFixed(1) || '-'}
+                </span>
+              </div>
+            </div>
           </div>
         )}
       </div>
 
       {/* Content */}
-      <div className="p-4 space-y-3">
+      <div className="p-3 space-y-2">
         <h3 className="font-semibold line-clamp-1">{portfolio.judul}</h3>
 
         {/* User Info */}
@@ -341,12 +364,18 @@ function PortfolioCard({
         {/* Assessment Status */}
         <div className="flex items-center gap-2">
           {hasAssessment ? (
-            <Badge variant="outline" className="text-green-600 border-green-600">
+            <Badge 
+              variant="secondary" 
+              className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-0"
+            >
               <CheckCircle2 className="h-3 w-3 mr-1" />
               Sudah Dinilai
             </Badge>
           ) : (
-            <Badge variant="outline" className="text-yellow-600 border-yellow-600">
+            <Badge 
+              variant="secondary" 
+              className="bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20 border-0"
+            >
               <Clock className="h-3 w-3 mr-1" />
               Belum Dinilai
             </Badge>
@@ -354,7 +383,7 @@ function PortfolioCard({
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2 pt-2">
+        <div className="flex gap-2 pt-1">
           <Button size="sm" className="flex-1" onClick={onAssess}>
             {hasAssessment ? 'Edit Penilaian' : 'Nilai Portfolio'}
           </Button>
@@ -432,6 +461,7 @@ function AssessmentSheet({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-assessments'] });
       queryClient.invalidateQueries({ queryKey: ['admin-assessment', portfolio?.id] });
+      queryClient.invalidateQueries({ queryKey: ['admin-assessment-stats'] });
       toast.success('Penilaian berhasil disimpan');
       onClose();
     },
@@ -457,108 +487,145 @@ function AssessmentSheet({
       ? Object.values(scores).reduce((sum, s) => sum + s.score, 0) / Object.values(scores).length
       : 0;
 
+  const getScoreColor = (score: number) => {
+    if (score < 4) return 'text-red-500';
+    if (score <= 7) return 'text-amber-500';
+    return 'text-green-500';
+  };
+
+  const getScoreBgColor = (score: number) => {
+    if (score < 4) return 'bg-red-500/10 border-red-500/20';
+    if (score <= 7) return 'bg-amber-500/10 border-amber-500/20';
+    return 'bg-green-500/10 border-green-500/20';
+  };
+
   if (!portfolio) return null;
 
   return (
     <Sheet open={!!portfolio} onOpenChange={() => onClose()}>
-      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>Penilaian Portfolio</SheetTitle>
-          <SheetDescription>{portfolio.judul}</SheetDescription>
-        </SheetHeader>
-
-        {isLoadingAssessment ? (
-          <div className="py-8 flex justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <div className="space-y-6 py-6">
-            {/* Portfolio Preview */}
-            <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50">
+      <SheetContent className="w-full sm:max-w-xl p-0 flex flex-col gap-0">
+        {/* Fixed Header */}
+        <div className="shrink-0 border-b bg-background">
+          {/* Portfolio Preview Header */}
+          <div className="p-4 pb-3">
+            <div className="flex items-start gap-3">
               {portfolio.thumbnail_url ? (
                 <img
                   src={portfolio.thumbnail_url}
                   alt={portfolio.judul}
-                  className="w-20 h-14 object-cover rounded"
+                  className="w-16 h-12 object-cover rounded-md shrink-0"
                 />
               ) : (
-                <div className="w-20 h-14 bg-muted rounded flex items-center justify-center">
-                  <ClipboardList className="h-6 w-6 text-muted-foreground" />
+                <div className="w-16 h-12 bg-muted rounded-md flex items-center justify-center shrink-0">
+                  <ClipboardList className="h-5 w-5 text-muted-foreground" />
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">{portfolio.judul}</p>
+                <h3 className="font-semibold text-base line-clamp-1">{portfolio.judul}</h3>
                 {portfolio.user && (
                   <p className="text-sm text-muted-foreground">oleh {portfolio.user.nama}</p>
                 )}
               </div>
-              <a
+              <Link
                 href={`/${portfolio.user?.username}/${portfolio.slug}`}
-                target="_blank"
-                rel="noopener noreferrer"
                 className="shrink-0"
               >
-                <Button variant="outline" size="sm">
-                  <Eye className="h-4 w-4 mr-1" />
+                <Button variant="outline" size="sm" className="h-8">
+                  <Eye className="h-3.5 w-3.5 mr-1.5" />
                   Lihat
                 </Button>
-              </a>
-            </div>
-
-            {/* Total Score Preview */}
-            <Card className="p-4 bg-primary/5 border-primary/20">
-              <div className="flex items-center justify-between">
-                <span className="font-medium">Total Nilai</span>
-                <div className="flex items-center gap-2">
-                  <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-                  <span className="text-2xl font-bold">{totalScore.toFixed(1)}</span>
-                  <span className="text-muted-foreground">/ 10</span>
-                </div>
-              </div>
-            </Card>
-
-            {/* Metrics */}
-            <div className="space-y-6">
-              <h4 className="font-medium">Penilaian per Metrik</h4>
-              {metrics.map((metric) => (
-                <MetricScoreInput
-                  key={metric.id}
-                  metric={metric}
-                  score={scores[metric.id]?.score || 5}
-                  comment={scores[metric.id]?.comment || ''}
-                  onScoreChange={(score) => handleScoreChange(metric.id, score)}
-                  onCommentChange={(comment) => handleCommentChange(metric.id, comment)}
-                />
-              ))}
-            </div>
-
-            {/* Final Comment */}
-            <div className="space-y-2">
-              <Label>Komentar Akhir (Opsional)</Label>
-              <Textarea
-                value={finalComment}
-                onChange={(e) => setFinalComment(e.target.value)}
-                placeholder="Berikan komentar atau feedback untuk portfolio ini..."
-                rows={3}
-              />
-            </div>
-
-            {/* Submit */}
-            <div className="flex gap-2 pt-4">
-              <Button variant="outline" className="flex-1" onClick={onClose}>
-                Batal
-              </Button>
-              <Button
-                className="flex-1"
-                onClick={() => submitMutation.mutate()}
-                disabled={submitMutation.isPending}
-              >
-                {submitMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Simpan Penilaian
-              </Button>
+              </Link>
             </div>
           </div>
-        )}
+
+          {/* Total Score - Sticky */}
+          <div className={cn('px-4 py-3 border-t', getScoreBgColor(totalScore))}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className={cn('rounded-full p-1.5', getScoreBgColor(totalScore))}>
+                  <Star className={cn('h-4 w-4', getScoreColor(totalScore), totalScore > 0 && 'fill-current')} />
+                </div>
+                <span className="font-medium text-sm">Total Nilai</span>
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className={cn('text-3xl font-bold tabular-nums', getScoreColor(totalScore))}>
+                  {totalScore.toFixed(1)}
+                </span>
+                <span className="text-muted-foreground text-sm">/ 10</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto">
+          {isLoadingAssessment ? (
+            <div className="py-12 flex flex-col items-center justify-center gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Memuat data penilaian...</p>
+            </div>
+          ) : (
+            <div className="p-4 space-y-4">
+              {/* Section: Metrics */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <ClipboardList className="h-4 w-4 text-muted-foreground" />
+                  <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
+                    Penilaian per Metrik
+                  </h4>
+                </div>
+                <div className="space-y-3">
+                  {metrics.map((metric, index) => (
+                    <MetricScoreInput
+                      key={metric.id}
+                      metric={metric}
+                      index={index + 1}
+                      score={scores[metric.id]?.score || 5}
+                      comment={scores[metric.id]?.comment || ''}
+                      onScoreChange={(score) => handleScoreChange(metric.id, score)}
+                      onCommentChange={(comment) => handleCommentChange(metric.id, comment)}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Section: Final Comment */}
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center gap-2">
+                  <Star className="h-4 w-4 text-muted-foreground" />
+                  <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
+                    Komentar Akhir
+                  </h4>
+                  <span className="text-xs text-muted-foreground">(Opsional)</span>
+                </div>
+                <Textarea
+                  value={finalComment}
+                  onChange={(e) => setFinalComment(e.target.value)}
+                  placeholder="Berikan komentar atau feedback keseluruhan untuk portfolio ini..."
+                  rows={3}
+                  className="resize-none"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Fixed Footer */}
+        <div className="shrink-0 border-t bg-background p-4">
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex-1" onClick={onClose}>
+              Batal
+            </Button>
+            <Button
+              className="flex-1"
+              onClick={() => submitMutation.mutate()}
+              disabled={submitMutation.isPending || isLoadingAssessment}
+            >
+              {submitMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Simpan Penilaian
+            </Button>
+          </div>
+        </div>
       </SheetContent>
     </Sheet>
   );

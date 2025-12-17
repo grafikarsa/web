@@ -3,6 +3,7 @@
 import { use } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { portfoliosApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/stores/auth-store';
@@ -47,9 +48,11 @@ function PortfolioSkeleton() {
 
 export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps) {
   const { username, slug } = use(params);
+  const router = useRouter();
   const { user: currentUser, isAuthenticated } = useAuthStore();
   const queryClient = useQueryClient();
   const isOwner = currentUser?.username === username;
+  const isAdmin = currentUser?.role === 'admin';
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['portfolio', username, slug],
@@ -108,13 +111,13 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
           <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
           
           {/* Back Button on Thumbnail */}
-          <Link 
-            href={`/${username}`} 
+          <button 
+            onClick={() => router.back()}
             className="absolute left-4 top-4 flex items-center gap-2 rounded-full bg-background/80 px-3 py-1.5 text-sm backdrop-blur-sm transition-colors hover:bg-background"
           >
             <ArrowLeft className="h-4 w-4" />
             <span className="hidden sm:inline">Kembali</span>
-          </Link>
+          </button>
 
           {/* Edit Button on Thumbnail */}
           {isOwner && (
@@ -131,13 +134,13 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
         </div>
       ) : (
         <div className="mb-6 flex items-center justify-between">
-          <Link 
-            href={`/${username}`} 
+          <button 
+            onClick={() => router.back()}
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
-            Kembali ke profil
-          </Link>
+            Kembali
+          </button>
           {isOwner && (
             <Link href={`/${username}/${slug}/edit`}>
               <Button variant="outline" size="sm">

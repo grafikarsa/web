@@ -12,6 +12,7 @@ const menuItems = [
   { name: 'Beranda', href: '/' },
   { name: 'Siswa', href: '/users' },
   { name: 'Portofolio', href: '/portfolios' },
+  { name: 'Changelog', href: '/changelog' },
 ];
 
 export function GuestNavbar() {

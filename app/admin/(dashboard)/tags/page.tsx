@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus, Loader2, Tag as TagIcon, Hash } from 'lucide-react';
+import { Plus, Loader2, Tag as TagIcon, Hash, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -19,19 +19,18 @@ import { DataTable, Column } from '@/components/admin/data-table';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { adminTagsApi } from '@/lib/api/admin';
 import { Tag } from '@/lib/types';
-import { useDebounce } from '@/lib/hooks/use-debounce';
 
 export default function AdminTagsPage() {
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [editTag, setEditTag] = useState<Tag | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deleteTag, setDeleteTag] = useState<Tag | null>(null);
-  const debouncedSearch = useDebounce(search, 300);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-tags', debouncedSearch],
-    queryFn: () => adminTagsApi.getTags({ search: debouncedSearch || undefined }),
+    queryKey: ['admin-tags', searchQuery],
+    queryFn: () => adminTagsApi.getTags({ search: searchQuery || undefined }),
   });
 
   const deleteMutation = useMutation({
@@ -45,6 +44,16 @@ export default function AdminTagsPage() {
       toast.error('Gagal menghapus tag');
     },
   });
+
+  const handleSearch = () => {
+    setSearchQuery(searchInput);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
 
   const tags = data?.data || [];
 
@@ -63,8 +72,22 @@ export default function AdminTagsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Action Button */}
-      <div className="flex justify-end">
+      {/* Search and Action Button in same row */}
+      <div className="flex gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Cari tag..."
+            className="pl-9"
+          />
+        </div>
+        <Button variant="secondary" onClick={handleSearch}>
+          <Search className="mr-2 h-4 w-4" />
+          Cari
+        </Button>
         <Button onClick={() => setIsCreateOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Tambah Tag
@@ -75,8 +98,6 @@ export default function AdminTagsPage() {
         data={tags}
         columns={columns}
         isLoading={isLoading}
-        searchPlaceholder="Cari tag..."
-        onSearch={setSearch}
         onEdit={setEditTag}
         onDelete={setDeleteTag}
       />

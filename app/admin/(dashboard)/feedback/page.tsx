@@ -18,7 +18,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -39,7 +38,6 @@ import {
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { adminFeedbackApi, Feedback, FeedbackStatus } from '@/lib/api/admin';
 import { formatDate } from '@/lib/utils/format';
-import { useDebounce } from '@/lib/hooks/use-debounce';
 import { cn } from '@/lib/utils';
 
 const statusOptions = [
@@ -76,19 +74,30 @@ const kategoriColors = {
 
 export default function AdminFeedbackPage() {
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [status, setStatus] = useState('all');
   const [kategori, setKategori] = useState('all');
   const [page, setPage] = useState(1);
   const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Feedback | null>(null);
-  const debouncedSearch = useDebounce(search, 300);
+
+  const handleSearch = () => {
+    setSearchQuery(searchInput);
+    setPage(1);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-feedback', debouncedSearch, status, kategori, page],
+    queryKey: ['admin-feedback', searchQuery, status, kategori, page],
     queryFn: () =>
       adminFeedbackApi.getFeedback({
-        search: debouncedSearch || undefined,
+        search: searchQuery || undefined,
         status: status === 'all' ? undefined : status,
         kategori: kategori === 'all' ? undefined : kategori,
         page,
@@ -147,8 +156,6 @@ export default function AdminFeedbackPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Feedback</h1>
-
       {/* Stats */}
       {stats && (
         <div className="grid gap-4 sm:grid-cols-4">
@@ -200,18 +207,19 @@ export default function AdminFeedbackPage() {
       )}
 
       {/* Filters */}
-      <div className="flex flex-col gap-4 sm:flex-row">
-        <div className="relative flex-1">
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Cari feedback..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={handleKeyDown}
             className="pl-9"
           />
         </div>
-        <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-full sm:w-40">
+        <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
+          <SelectTrigger className="w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -222,8 +230,8 @@ export default function AdminFeedbackPage() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={kategori} onValueChange={setKategori}>
-          <SelectTrigger className="w-full sm:w-40">
+        <Select value={kategori} onValueChange={(v) => { setKategori(v); setPage(1); }}>
+          <SelectTrigger className="w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -234,6 +242,10 @@ export default function AdminFeedbackPage() {
             ))}
           </SelectContent>
         </Select>
+        <Button variant="secondary" onClick={handleSearch}>
+          <Search className="mr-2 h-4 w-4" />
+          Cari
+        </Button>
       </div>
 
       {/* Feedback List */}
@@ -243,7 +255,7 @@ export default function AdminFeedbackPage() {
             <MessageSquareText className="h-12 w-12 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-semibold">Tidak ada feedback</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              {search || status !== 'all' || kategori !== 'all'
+              {searchQuery || status !== 'all' || kategori !== 'all'
                 ? 'Tidak ada feedback yang sesuai filter'
                 : 'Belum ada feedback masuk'}
             </p>

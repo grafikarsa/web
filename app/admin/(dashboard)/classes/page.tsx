@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus, Loader2, Users } from 'lucide-react';
+import { Plus, Loader2, Users, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -14,7 +15,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -34,9 +34,21 @@ import {
 
 export default function AdminClassesPage() {
   const queryClient = useQueryClient();
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [editClass, setEditClass] = useState<Class | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deleteClass, setDeleteClass] = useState<Class | null>(null);
+
+  const handleSearch = () => {
+    setSearchQuery(searchInput);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-classes'],
@@ -55,7 +67,16 @@ export default function AdminClassesPage() {
     },
   });
 
-  const classes = data?.data || [];
+  const allClasses = data?.data || [];
+  
+  // Filter classes by search query (client-side)
+  const classes = searchQuery
+    ? allClasses.filter((c) =>
+        c.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.jurusan?.nama?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.rombel?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : allClasses;
 
   const columns: Column<Class>[] = [
     {
@@ -105,8 +126,22 @@ export default function AdminClassesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Action Button */}
-      <div className="flex justify-end">
+      {/* Search and Action Button in same row */}
+      <div className="flex gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Cari kelas..."
+            className="pl-9"
+          />
+        </div>
+        <Button variant="secondary" onClick={handleSearch}>
+          <Search className="mr-2 h-4 w-4" />
+          Cari
+        </Button>
         <Button onClick={() => setIsCreateOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Tambah Kelas

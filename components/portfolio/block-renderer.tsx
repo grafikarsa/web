@@ -61,22 +61,31 @@ function ImageBlock({ payload }: { payload: ImageBlockPayload }) {
 }
 
 function TableBlock({ payload }: { payload: TableBlockPayload }) {
+  const headers = payload.headers || [];
+  const rows = payload.rows || [];
+  
+  if (headers.length === 0 && rows.length === 0) {
+    return null;
+  }
+  
   return (
     <div className="overflow-x-auto rounded-lg border">
       <table className="w-full">
-        <thead className="bg-muted">
-          <tr>
-            {payload.headers.map((header, i) => (
-              <th key={i} className="px-4 py-2 text-left font-medium">
-                {header}
-              </th>
-            ))}
-          </tr>
-        </thead>
+        {headers.length > 0 && (
+          <thead className="bg-muted">
+            <tr>
+              {headers.map((header, i) => (
+                <th key={i} className="px-4 py-2 text-left font-medium">
+                  {header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+        )}
         <tbody>
-          {payload.rows.map((row, i) => (
+          {rows.map((row, i) => (
             <tr key={i} className="border-t">
-              {row.map((cell, j) => (
+              {(row || []).map((cell, j) => (
                 <td key={j} className="px-4 py-2">
                   {cell}
                 </td>

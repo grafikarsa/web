@@ -42,6 +42,7 @@ export function UserProfile({ profile }: UserProfileProps) {
   const { user: currentUser, isAuthenticated } = useAuthStore();
   const queryClient = useQueryClient();
   const isOwner = currentUser?.username === profile.username;
+  const isAdmin = currentUser?.role === 'admin';
   const [followModalType, setFollowModalType] = useState<'followers' | 'following' | null>(null);
 
   const followMutation = useMutation({
@@ -88,7 +89,7 @@ export function UserProfile({ profile }: UserProfileProps) {
                   Edit Profil
                 </Button>
               </Link>
-            ) : isAuthenticated ? (
+            ) : isAuthenticated && !isAdmin ? (
               <Button
                 variant={profile.is_following ? 'outline' : 'default'}
                 size="sm"

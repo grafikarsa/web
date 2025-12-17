@@ -132,13 +132,13 @@ export default function ModerationPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header Badge */}
-      <div className="flex justify-end">
+      {/* Header Badge - Centered */}
+      <div className="flex justify-center">
         <Badge
           variant={totalPending > 0 ? 'default' : 'secondary'}
-          className="w-fit gap-1.5 px-3 py-1.5"
+          className="gap-1.5 px-4 py-2 text-sm"
         >
-          <Clock className="h-3.5 w-3.5" />
+          <Clock className="h-4 w-4" />
           {totalPending} menunggu review
         </Badge>
       </div>
@@ -234,7 +234,8 @@ export default function ModerationPage() {
                   <div className="mt-4 flex gap-2">
                     <Button
                       size="sm"
-                      className="flex-1"
+                      variant="ghost"
+                      className="flex-1 bg-green-500/10 text-green-600 hover:bg-green-500/20 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
                       onClick={() => openReviewDialog(portfolio.id, 'approve')}
                     >
                       <Check className="mr-1.5 h-4 w-4" />
@@ -242,8 +243,8 @@ export default function ModerationPage() {
                     </Button>
                     <Button
                       size="sm"
-                      variant="destructive"
-                      className="flex-1"
+                      variant="ghost"
+                      className="flex-1 bg-red-500/10 text-red-600 hover:bg-red-500/20 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                       onClick={() => openReviewDialog(portfolio.id, 'reject')}
                     >
                       <X className="mr-1.5 h-4 w-4" />

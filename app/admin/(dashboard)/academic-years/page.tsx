@@ -105,7 +105,7 @@ export default function AdminAcademicYearsPage() {
       header: 'Status',
       render: (y) =>
         y.is_active ? (
-          <Badge variant="default" className="gap-1">
+          <Badge variant="default" className="gap-1 bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400">
             <CheckCircle className="h-3 w-3" />
             Aktif
           </Badge>

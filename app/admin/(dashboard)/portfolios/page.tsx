@@ -77,6 +77,7 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -517,10 +518,10 @@ function PreviewDialog({
 
         <div className="flex justify-between border-t bg-background px-4 py-3 sm:px-6">
           <Button variant="ghost" onClick={onClose}>Tutup</Button>
-          <Link href={`/${portfolio.user?.username}/${portfolio.slug}`} target="_blank">
+          <Link href={`/${portfolio.user?.username}/${portfolio.slug}`}>
             <Button variant="outline">
               <Eye className="mr-2 h-4 w-4" />
-              Lihat Publik
+              Lihat Portfolio
             </Button>
           </Link>
         </div>
