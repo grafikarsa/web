@@ -18,6 +18,7 @@ export interface FeedItem {
   thumbnail_url?: string;
   preview_text?: string;
   published_at?: string;
+  created_at?: string;
   like_count: number;
   view_count: number;
   is_liked: boolean;

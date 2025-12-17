@@ -237,7 +237,7 @@ export function SmartFeedList() {
           {/* Feed Items */}
           <div className="divide-y">
             {feedItems.map((item) => (
-              <TimelineFeedItem key={item.id} item={item} onShare={handleShare} />
+              <TimelineFeedItem key={item.id} item={item} algorithm={algorithm} onShare={handleShare} />
             ))}
           </div>
 
