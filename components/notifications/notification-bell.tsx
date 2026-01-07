@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Bell, Check, UserPlus, Heart, CheckCircle, XCircle } from 'lucide-react';
+import { Bell, Check, UserPlus, Heart, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
 import { notificationsApi } from '@/lib/api';
 import { Notification, NotificationType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ const notificationIcons: Record<NotificationType, React.ReactNode> = {
   portfolio_liked: <Heart className="h-4 w-4 text-red-500" />,
   portfolio_approved: <CheckCircle className="h-4 w-4 text-green-500" />,
   portfolio_rejected: <XCircle className="h-4 w-4 text-amber-500" />,
+  feedback_updated: <MessageSquare className="h-4 w-4 text-purple-500" />,
 };
 
 function getNotificationLink(notification: Notification | null | undefined): string | null {
@@ -37,10 +38,13 @@ function getNotificationLink(notification: Notification | null | undefined): str
     case 'portfolio_approved':
     case 'portfolio_rejected':
       return data.portfolio_slug ? `/me/portfolios` : null;
+    case 'feedback_updated':
+      return null; // No specific page for user feedback yet
     default:
       return null;
   }
 }
+
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
@@ -121,6 +125,9 @@ export function NotificationBell() {
           <>
             {notifications.map((notification) => {
               const link = getNotificationLink(notification);
+              const isFeedback = notification.type === 'feedback_updated';
+              const feedbackData = isFeedback ? (notification.data as any) : null;
+
               const content = (
                 <div className="flex gap-3">
                   <div className="mt-0.5">{notificationIcons[notification.type]}</div>
@@ -128,6 +135,14 @@ export function NotificationBell() {
                     <p className={cn('text-sm', !notification.is_read && 'font-medium')}>
                       {notification.message || notification.title}
                     </p>
+                    {isFeedback && feedbackData && (
+                      <div className="text-xs text-muted-foreground">
+                        <p className="font-medium text-foreground/80">Oleh: {feedbackData.actor_role}</p>
+                        {feedbackData.admin_note && (
+                          <p className="mt-0.5 line-clamp-2 italic">"{feedbackData.admin_note}"</p>
+                        )}
+                      </div>
+                    )}
                     <p className="text-xs text-muted-foreground">
                       {formatDistanceToNow(notification.created_at)}
                     </p>

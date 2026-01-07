@@ -1,4 +1,4 @@
-export type NotificationType = 'new_follower' | 'portfolio_liked' | 'portfolio_approved' | 'portfolio_rejected';
+export type NotificationType = 'new_follower' | 'portfolio_liked' | 'portfolio_approved' | 'portfolio_rejected' | 'feedback_updated';
 
 export interface Notification {
   id: string;

@@ -30,7 +30,7 @@ function ChangelogNavItem({ pathname }: { pathname: string }) {
     refetchInterval: 60000, // Refresh every minute
   });
 
-  const unreadCount = data?.data?.count || 0;
+  const unreadCount = data?.data?.data?.count || 0;
 
   return (
     <Tooltip>
