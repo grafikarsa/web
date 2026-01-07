@@ -22,6 +22,20 @@ export const metadata: Metadata = {
     template: '%s | Grafikarsa',
   },
   description: 'Platform Katalog Portofolio & Social Network Warga SMKN 4 Malang',
+  icons: {
+    icon: [
+      {
+        media: '(prefers-color-scheme: light)',
+        url: '/images/logos/logo_black.svg',
+        href: '/images/logos/logo_black.svg',
+      },
+      {
+        media: '(prefers-color-scheme: dark)',
+        url: '/images/logos/logo_white.svg',
+        href: '/images/logos/logo_white.svg',
+      },
+    ],
+  },
 };
 
 export default function RootLayout({
