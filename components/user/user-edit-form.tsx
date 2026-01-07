@@ -21,6 +21,7 @@ import { uploadsApi } from '@/lib/api/admin';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useDebounce } from '@/lib/hooks/use-debounce';
 import { cn } from '@/lib/utils';
+import { ImageCropper } from '@/components/common/image-cropper';
 
 const profileSchema = z.object({
   nama: z.string().min(2, 'Nama minimal 2 karakter').max(100),
@@ -68,7 +69,7 @@ export function UserEditForm({ user }: UserEditFormProps) {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   // Avatar & Banner state
   const [avatarUrl, setAvatarUrl] = useState<string | null>(user.avatar_url || null);
   const [bannerUrl, setBannerUrl] = useState<string | null>(user.banner_url || null);
@@ -76,6 +77,12 @@ export function UserEditForm({ user }: UserEditFormProps) {
   const [bannerUploading, setBannerUploading] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
+
+  // Cropper state
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [cropperImage, setCropperImage] = useState<string | null>(null);
+  const [cropType, setCropType] = useState<'avatar' | 'banner'>('avatar');
+  const [pendingFile, setPendingFile] = useState<File | null>(null); // Keep reference strictly for extension check if needed
 
   const profileForm = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -119,66 +126,82 @@ export function UserEditForm({ user }: UserEditFormProps) {
     checkUsername();
   }, [debouncedUsername, user.username]);
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('Ukuran file maksimal 2MB');
-      return;
-    }
+  const processFileSort = (file: File, type: 'avatar' | 'banner') => {
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
       toast.error('Format file harus JPG, PNG, atau WebP');
       return;
     }
 
-    setAvatarUploading(true);
-    try {
-      const url = await uploadsApi.uploadFile(file, 'avatar');
-      setAvatarUrl(url);
-      if (authUser) {
-        setUser({ ...authUser, avatar_url: url });
-      }
-      queryClient.invalidateQueries({ queryKey: ['user', user.username] });
-      toast.success('Foto profil berhasil diupload');
-    } catch (error) {
-      console.error('Avatar upload error:', error);
-      toast.error('Gagal mengupload foto profil');
-    } finally {
-      setAvatarUploading(false);
-      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    // Limit just to read into cropper, strict server limit checks happen later or during crop? 
+    // We can check original size but crop might be smaller. Let's check generally.
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Ukuran file terlalu besar (max 10MB)'); // Local check for initial load
+      return;
     }
+
+    const reader = new FileReader();
+    reader.addEventListener('load', () => {
+      setCropperImage(reader.result?.toString() || null);
+      setCropType(type);
+      setPendingFile(file); // Store original file info if needed
+      setCropperOpen(true);
+    });
+    reader.readAsDataURL(file);
   };
 
-  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (file) processFileSort(file, 'avatar');
+    // Reset input
+    if (e.target) e.target.value = '';
+  };
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Ukuran file maksimal 5MB');
-      return;
-    }
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      toast.error('Format file harus JPG, PNG, atau WebP');
-      return;
-    }
+  const handleBannerSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processFileSort(file, 'banner');
+    if (e.target) e.target.value = '';
+  };
 
-    setBannerUploading(true);
-    try {
-      const url = await uploadsApi.uploadFile(file, 'banner');
-      setBannerUrl(url);
-      if (authUser) {
-        setUser({ ...authUser, banner_url: url });
+  const handleCropComplete = async (croppedFile: File) => {
+    if (cropType === 'avatar') {
+      if (croppedFile.size > 2 * 1024 * 1024) {
+        toast.error('Hasil crop terlalu besar (>2MB). Coba zoom out atau pilih gambar lain.');
+        return;
       }
-      queryClient.invalidateQueries({ queryKey: ['user', user.username] });
-      toast.success('Banner berhasil diupload');
-    } catch (error) {
-      console.error('Banner upload error:', error);
-      toast.error('Gagal mengupload banner');
-    } finally {
-      setBannerUploading(false);
-      if (bannerInputRef.current) bannerInputRef.current.value = '';
+      setAvatarUploading(true);
+      try {
+        const url = await uploadsApi.uploadFile(croppedFile, 'avatar');
+        setAvatarUrl(url);
+        if (authUser) setUser({ ...authUser, avatar_url: url });
+        queryClient.invalidateQueries({ queryKey: ['user', user.username] });
+        toast.success('Foto profil berhasil diperbarui');
+      } catch (error) {
+        console.error(error);
+        toast.error('Gagal upload foto profil');
+      } finally {
+        setAvatarUploading(false);
+      }
+    } else {
+      if (croppedFile.size > 5 * 1024 * 1024) {
+        toast.error('Hasil crop terlalu besar (>5MB).');
+        return;
+      }
+      setBannerUploading(true);
+      try {
+        const url = await uploadsApi.uploadFile(croppedFile, 'banner');
+        setBannerUrl(url);
+        if (authUser) setUser({ ...authUser, banner_url: url });
+        queryClient.invalidateQueries({ queryKey: ['user', user.username] });
+        toast.success('Banner berhasil diperbarui');
+      } catch (error) {
+        console.error(error);
+        toast.error('Gagal upload banner');
+      } finally {
+        setBannerUploading(false);
+      }
     }
+    setCropperOpen(false);
+    setCropperImage(null);
   };
 
   const updateProfileMutation = useMutation({
@@ -241,7 +264,7 @@ export function UserEditForm({ user }: UserEditFormProps) {
       {/* Hero Section - Banner & Avatar Preview */}
       <div className="relative overflow-hidden rounded-xl border bg-card">
         {/* Banner */}
-        <div 
+        <div
           className="relative h-36 cursor-pointer bg-gradient-to-r from-primary/20 via-primary/10 to-primary/5 sm:h-44"
           onClick={() => !bannerUploading && bannerInputRef.current?.click()}
         >
@@ -264,7 +287,7 @@ export function UserEditForm({ user }: UserEditFormProps) {
             type="file"
             accept="image/jpeg,image/png,image/webp"
             className="hidden"
-            onChange={handleBannerUpload}
+            onChange={handleBannerSelect}
             disabled={bannerUploading}
           />
         </div>
@@ -273,7 +296,7 @@ export function UserEditForm({ user }: UserEditFormProps) {
         <div className="relative px-4 pb-4 sm:px-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-6">
             {/* Avatar */}
-            <div 
+            <div
               className="-mt-12 relative cursor-pointer sm:-mt-14"
               onClick={() => !avatarUploading && avatarInputRef.current?.click()}
             >
@@ -296,7 +319,7 @@ export function UserEditForm({ user }: UserEditFormProps) {
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 className="hidden"
-                onChange={handleAvatarUpload}
+                onChange={handleAvatarSelect}
                 disabled={avatarUploading}
               />
             </div>
@@ -319,7 +342,7 @@ export function UserEditForm({ user }: UserEditFormProps) {
           <UserIcon className="h-5 w-5 text-muted-foreground" />
           <h2 className="text-lg font-semibold">Informasi Profil</h2>
         </div>
-        
+
         <form onSubmit={profileForm.handleSubmit((data) => updateProfileMutation.mutate(data))} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -332,9 +355,9 @@ export function UserEditForm({ user }: UserEditFormProps) {
             <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
               <div className="relative">
-                <Input 
-                  id="username" 
-                  {...profileForm.register('username')} 
+                <Input
+                  id="username"
+                  {...profileForm.register('username')}
                   className={cn(
                     usernameAvailable === true && 'border-green-500 focus-visible:ring-green-500',
                     usernameAvailable === false && 'border-destructive focus-visible:ring-destructive'
@@ -371,10 +394,10 @@ export function UserEditForm({ user }: UserEditFormProps) {
               <Label htmlFor="bio">Bio</Label>
               <span className="text-xs text-muted-foreground">{watchedBio?.length || 0}/500</span>
             </div>
-            <Textarea 
-              id="bio" 
-              rows={3} 
-              {...profileForm.register('bio')} 
+            <Textarea
+              id="bio"
+              rows={3}
+              {...profileForm.register('bio')}
               placeholder="Ceritakan sedikit tentang dirimu..."
               className="resize-none"
             />
@@ -459,10 +482,10 @@ export function UserEditForm({ user }: UserEditFormProps) {
             <div className="space-y-2">
               <Label htmlFor="current_password">Password Saat Ini</Label>
               <div className="relative">
-                <Input 
-                  id="current_password" 
-                  type={showCurrentPassword ? 'text' : 'password'} 
-                  {...passwordForm.register('current_password')} 
+                <Input
+                  id="current_password"
+                  type={showCurrentPassword ? 'text' : 'password'}
+                  {...passwordForm.register('current_password')}
                 />
                 <button
                   type="button"
@@ -480,10 +503,10 @@ export function UserEditForm({ user }: UserEditFormProps) {
               <div className="space-y-2">
                 <Label htmlFor="new_password">Password Baru</Label>
                 <div className="relative">
-                  <Input 
-                    id="new_password" 
-                    type={showNewPassword ? 'text' : 'password'} 
-                    {...passwordForm.register('new_password')} 
+                  <Input
+                    id="new_password"
+                    type={showNewPassword ? 'text' : 'password'}
+                    {...passwordForm.register('new_password')}
                   />
                   <button
                     type="button"
@@ -500,10 +523,10 @@ export function UserEditForm({ user }: UserEditFormProps) {
               <div className="space-y-2">
                 <Label htmlFor="new_password_confirmation">Konfirmasi Password</Label>
                 <div className="relative">
-                  <Input 
-                    id="new_password_confirmation" 
-                    type={showConfirmPassword ? 'text' : 'password'} 
-                    {...passwordForm.register('new_password_confirmation')} 
+                  <Input
+                    id="new_password_confirmation"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    {...passwordForm.register('new_password_confirmation')}
                   />
                   <button
                     type="button"
@@ -525,6 +548,16 @@ export function UserEditForm({ user }: UserEditFormProps) {
           </form>
         </CollapsibleContent>
       </Collapsible>
+
+      <ImageCropper
+        open={cropperOpen}
+        onOpenChange={setCropperOpen}
+        imageSrc={cropperImage}
+        aspect={cropType === 'avatar' ? 1 : 3}
+        onCropComplete={handleCropComplete}
+        title={cropType === 'avatar' ? 'Sesuaikan Foto Profil' : 'Sesuaikan Banner Profil'}
+        description={cropType === 'avatar' ? 'Geser dan zoom untuk menyesuaikan foto profil.' : 'Geser dan zoom untuk menyesuaikan banner.'}
+      />
     </div>
   );
 }
