@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/lib/stores/auth-store';
+import { useUIStore } from '@/lib/stores/ui-store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -18,7 +19,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { Home, Plus, Search, Users, FolderOpen, History } from 'lucide-react';
+import { Home, Plus, Search, Users, FolderOpen, History, Shield } from 'lucide-react';
 import { getUnreadCount } from '@/lib/api/changelog';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 
@@ -65,6 +66,12 @@ export function StudentSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useAuthStore();
+  const { setViewMode } = useUIStore();
+
+  const hasAdminAccess =
+    user?.role === 'admin' ||
+    (user?.special_roles && user.special_roles.length > 0) ||
+    (user?.capabilities && user.capabilities.length > 0);
 
   const navItems = [
     { href: '/', label: 'Feed', icon: Home, exact: true },
@@ -112,6 +119,24 @@ export function StudentSidebar() {
               </Tooltip>
             );
           })}
+
+          {/* Admin Panel Switcher */}
+          {hasAdminAccess && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => {
+                    setViewMode('admin');
+                    router.push('/admin');
+                  }}
+                  className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground"
+                >
+                  <Shield className="h-5 w-5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Switch to Admin Panel</TooltipContent>
+            </Tooltip>
+          )}
 
           {/* Search Popover */}
           <Popover>

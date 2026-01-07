@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/lib/stores/auth-store';
+import { useUIStore } from '@/lib/stores/ui-store';
 import { useThemeValue } from '@/lib/hooks/use-theme-value';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -117,7 +118,9 @@ const navSections: NavSection[] = [
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user } = useAuthStore();
+  const { setViewMode } = useUIStore();
   const { theme, mounted } = useThemeValue();
 
   // Check if user is full admin or has special roles
@@ -257,17 +260,21 @@ export function AdminSidebar() {
 
         <Separator />
 
-        {/* Back to Main Site (for non-admin users) */}
-        {!isFullAdmin && (
-          <div className="border-b p-2">
-            <Button variant="ghost" size="sm" className="w-full justify-start gap-2" asChild>
-              <Link href="/">
-                <ArrowLeft className="h-4 w-4" />
-                Kembali ke Beranda
-              </Link>
-            </Button>
-          </div>
-        )}
+        {/* Switch to User App (for admins/special roles) */}
+        <div className="border-b p-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              setViewMode('user');
+              router.push('/');
+            }}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Switch to App View
+          </Button>
+        </div>
 
         {/* User Profile */}
         <div className="p-2">

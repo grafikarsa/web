@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuthStore } from '@/lib/stores/auth-store';
+import { useUIStore } from '@/lib/stores/ui-store';
 import { GuestNavbar, StudentSidebar, StudentHeader, Footer } from '@/components/layout';
 import { AdminSidebar } from '@/components/layout/admin-sidebar';
 import { AdminHeader } from '@/components/layout/admin-header';
@@ -26,12 +27,16 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     (user?.special_roles && user.special_roles.length > 0) ||
     (user?.capabilities && user.capabilities.length > 0);
 
+  // UI Store for view mode
+  const { viewMode } = useUIStore();
+
   if (isLoading) {
     return <LoadingScreen />;
   }
 
   // Admin layout - show admin header/sidebar when browsing public pages
-  if (isAuthenticated && hasAdminAccess) {
+  // Only if viewMode is explicitly 'admin' (default)
+  if (isAuthenticated && hasAdminAccess && viewMode === 'admin') {
     return (
       <div className="flex min-h-screen">
         <AdminSidebar />
