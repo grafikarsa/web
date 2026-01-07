@@ -149,7 +149,7 @@ function FollowUserItem({
           <AvatarFallback>{user.nama?.charAt(0).toUpperCase()}</AvatarFallback>
         </Avatar>
       </Link>
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-w-0 overflow-hidden">
         <Link href={`/${user.username}`} onClick={onClose} className="block truncate hover:underline">
           <span className="text-sm font-medium">{user.nama}</span>
         </Link>
