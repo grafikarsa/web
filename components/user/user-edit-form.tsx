@@ -127,15 +127,20 @@ export function UserEditForm({ user }: UserEditFormProps) {
   }, [debouncedUsername, user.username]);
 
   const processFileSort = (file: File, type: 'avatar' | 'banner') => {
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      toast.error('Format file harus JPG, PNG, atau WebP');
+    const allowedTypes = type === 'banner'
+      ? ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+      : ['image/jpeg', 'image/png', 'image/webp'];
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.error(type === 'banner'
+        ? 'Format file harus JPG, PNG, WebP, atau GIF'
+        : 'Format file harus JPG, PNG, atau WebP');
       return;
     }
 
-    // Limit just to read into cropper, strict server limit checks happen later or during crop? 
-    // We can check original size but crop might be smaller. Let's check generally.
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('Ukuran file terlalu besar (max 10MB)'); // Local check for initial load
+    const maxSize = type === 'banner' ? 10 * 1024 * 1024 : 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error('Ukuran file terlalu besar (max 10MB)');
       return;
     }
 
@@ -143,7 +148,7 @@ export function UserEditForm({ user }: UserEditFormProps) {
     reader.addEventListener('load', () => {
       setCropperImage(reader.result?.toString() || null);
       setCropType(type);
-      setPendingFile(file); // Store original file info if needed
+      setPendingFile(file);
       setCropperOpen(true);
     });
     reader.readAsDataURL(file);
@@ -285,7 +290,7 @@ export function UserEditForm({ user }: UserEditFormProps) {
           <input
             ref={bannerInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/jpeg,image/png,image/webp,image/gif"
             className="hidden"
             onChange={handleBannerSelect}
             disabled={bannerUploading}
