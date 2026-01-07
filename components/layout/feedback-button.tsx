@@ -32,10 +32,7 @@ export function FeedbackButton() {
     const [kategori, setKategori] = useState<FeedbackKategori>('saran');
     const [pesan, setPesan] = useState('');
 
-    // Hide on landing page and auth pages
-    if (pathname === '/' || pathname?.startsWith('/login') || pathname?.startsWith('/register') || pathname?.startsWith('/forgot-password')) {
-        return null;
-    }
+
 
     const mutation = useMutation({
         mutationFn: feedbackApi.createFeedback,
@@ -59,6 +56,11 @@ export function FeedbackButton() {
         }
         mutation.mutate({ kategori, pesan });
     };
+
+    // Hide on landing page and auth pages
+    if (pathname === '/' || pathname?.startsWith('/login') || pathname?.startsWith('/register') || pathname?.startsWith('/forgot-password')) {
+        return null;
+    }
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
