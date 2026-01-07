@@ -24,10 +24,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { feedbackApi, FeedbackKategori } from '@/lib/api/feedback';
 
+import { usePathname } from 'next/navigation';
+
 export function FeedbackButton() {
+    const pathname = usePathname();
     const [open, setOpen] = useState(false);
     const [kategori, setKategori] = useState<FeedbackKategori>('saran');
     const [pesan, setPesan] = useState('');
+
+    // Hide on landing page and auth pages
+    if (pathname === '/' || pathname?.startsWith('/login') || pathname?.startsWith('/register') || pathname?.startsWith('/forgot-password')) {
+        return null;
+    }
 
     const mutation = useMutation({
         mutationFn: feedbackApi.createFeedback,
