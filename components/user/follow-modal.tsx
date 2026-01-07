@@ -143,14 +143,14 @@ function FollowUserItem({
 
   return (
     <div className="flex items-center gap-3 rounded-lg p-2 hover:bg-muted/50">
-      <Link href={`/${user.username}`} onClick={onClose}>
+      <Link href={`/${user.username}`} onClick={onClose} className="shrink-0">
         <Avatar className="h-10 w-10">
           <AvatarImage src={user.avatar_url} alt={user.nama} />
           <AvatarFallback>{user.nama?.charAt(0).toUpperCase()}</AvatarFallback>
         </Avatar>
       </Link>
       <div className="min-w-0 flex-1">
-        <Link href={`/${user.username}`} onClick={onClose} className="hover:underline">
+        <Link href={`/${user.username}`} onClick={onClose} className="block hover:underline">
           <p className="truncate text-sm font-medium">{user.nama}</p>
         </Link>
         <p className="truncate text-xs text-muted-foreground">@{user.username}</p>
@@ -159,7 +159,7 @@ function FollowUserItem({
         <Button
           variant={user.is_following ? 'outline' : 'default'}
           size="sm"
-          className="h-8 text-xs"
+          className="h-8 shrink-0 text-xs"
           onClick={() => followMutation.mutate()}
           disabled={followMutation.isPending}
         >
