@@ -26,8 +26,11 @@ import { feedbackApi, FeedbackKategori } from '@/lib/api/feedback';
 
 import { usePathname } from 'next/navigation';
 
+import { useAuthStore } from '@/lib/stores/auth-store';
+
 export function FeedbackButton() {
     const pathname = usePathname();
+    const { isAuthenticated } = useAuthStore();
     const [open, setOpen] = useState(false);
     const [kategori, setKategori] = useState<FeedbackKategori>('saran');
     const [pesan, setPesan] = useState('');
@@ -57,8 +60,13 @@ export function FeedbackButton() {
         mutation.mutate({ kategori, pesan });
     };
 
-    // Hide on landing page and auth pages
-    if (pathname === '/' || pathname?.startsWith('/login') || pathname?.startsWith('/register') || pathname?.startsWith('/forgot-password')) {
+    // Hide on auth pages
+    if (pathname?.startsWith('/login') || pathname?.startsWith('/register') || pathname?.startsWith('/forgot-password')) {
+        return null;
+    }
+
+    // Hide on landing page (only if not authenticated)
+    if (pathname === '/' && !isAuthenticated) {
         return null;
     }
 
