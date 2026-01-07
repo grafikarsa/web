@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Bell, Check, UserPlus, Heart, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
-import { notificationsApi } from '@/lib/api';
+import { notificationsApi, usersApi } from '@/lib/api';
 import { Notification, NotificationType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -125,8 +125,24 @@ export function NotificationBell() {
           <>
             {notifications.map((notification) => {
               const link = getNotificationLink(notification);
+              const isNewFollower = notification.type === 'new_follower';
+              // Cast data to any to safely access enriched fields which might be mixed types
+              const notifData = notification.data as any;
+
               const isFeedback = notification.type === 'feedback_updated';
-              const feedbackData = isFeedback ? (notification.data as any) : null;
+              const feedbackData = isFeedback ? notifData : null;
+
+              const showFollowBack = isNewFollower && notifData?.follower_username && !notifData?.follower_is_following;
+
+              const handleFollowBack = (e: React.MouseEvent, username: string) => {
+                e.preventDefault();
+                e.stopPropagation();
+                usersApi.follow(username).then(() => {
+                  queryClient.invalidateQueries({ queryKey: ['notifications'] });
+                  queryClient.invalidateQueries({ queryKey: ['followers'] });
+                  queryClient.invalidateQueries({ queryKey: ['following'] });
+                });
+              };
 
               const content = (
                 <div className="flex gap-3">
@@ -143,12 +159,25 @@ export function NotificationBell() {
                         )}
                       </div>
                     )}
+                    {showFollowBack && (
+                      <div className="mt-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          onClick={(e) => handleFollowBack(e, notifData.follower_username)}
+                        >
+                          <UserPlus className="mr-1.5 h-3 w-3" />
+                          Follback
+                        </Button>
+                      </div>
+                    )}
                     <p className="text-xs text-muted-foreground">
                       {formatDistanceToNow(notification.created_at)}
                     </p>
                   </div>
                   {!notification.is_read && (
-                    <div className="mt-2 h-2 w-2 rounded-full bg-blue-500" />
+                    <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
                   )}
                 </div>
               );
