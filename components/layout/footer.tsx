@@ -46,7 +46,7 @@ export function Footer() {
         </div>
 
         <div className="mt-8 border-t pt-8 text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Grafikarsa. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Grafikarsa by Codepacker (RPL). All rights reserved.</p>
         </div>
       </div>
     </footer>
