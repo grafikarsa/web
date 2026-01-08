@@ -24,6 +24,8 @@ const notificationIcons: Record<NotificationType, React.ReactNode> = {
   portfolio_approved: <CheckCircle className="h-4 w-4 text-green-500" />,
   portfolio_rejected: <XCircle className="h-4 w-4 text-amber-500" />,
   feedback_updated: <MessageSquare className="h-4 w-4 text-purple-500" />,
+  new_comment: <MessageSquare className="h-4 w-4 text-blue-500" />,
+  reply_comment: <MessageSquare className="h-4 w-4 text-green-500" />,
 };
 
 function getNotificationLink(notification: Notification | null | undefined): string | null {
@@ -37,7 +39,23 @@ function getNotificationLink(notification: Notification | null | undefined): str
     case 'portfolio_liked':
     case 'portfolio_approved':
     case 'portfolio_rejected':
-      return data.portfolio_slug ? `/me/portfolios` : null;
+      return data.portfolio_slug ? `/me/portfolios` : null; // Logic check: Liked usually implies someone liked MY portfolio? But if I am liker? No, notification is for receiver.
+    // If someone liked MY portfolio, I should go to my portfolio detail to see it? Or generic list?
+    // Actually `portfolio_liked` notification data usually contains `slug` if implemented correctly in backend.
+    // Let's assume `portfolio_slug` exists for these. 
+    // Ideally should be `/${username}/${slug}` but we might not have username of owner (me) easily if not in data.
+    // But wait, "me" routes are usually dashboard.
+    // For comments, we want public page.
+    case 'new_comment':
+    case 'reply_comment':
+      const ownerUsername = data.portfolio_owner_username;
+      const slug = data.portfolio_slug;
+      const commentId = data.comment_id;
+
+      if (ownerUsername && slug) {
+        return `/${ownerUsername}/${slug}#comment-${commentId || 'section'}`;
+      }
+      return null;
     case 'feedback_updated':
       return null; // No specific page for user feedback yet
     default:

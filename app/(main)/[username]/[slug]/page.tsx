@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { portfoliosApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { BlockRenderer } from '@/components/portfolio/block-renderer';
+import { CommentSection } from '@/components/portfolio/comments/comment-section';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -100,18 +101,18 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
       {/* Hero Section - Full Width Thumbnail */}
       {portfolio.thumbnail_url ? (
         <div className="relative -mx-6 -mt-6 aspect-[21/9] w-[calc(100%+3rem)] overflow-hidden bg-muted">
-          <Image 
-            src={portfolio.thumbnail_url} 
-            alt={portfolio.judul} 
-            fill 
-            className="object-cover" 
+          <Image
+            src={portfolio.thumbnail_url}
+            alt={portfolio.judul}
+            fill
+            className="object-cover"
             priority
           />
           {/* Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
-          
+
           {/* Back Button on Thumbnail */}
-          <button 
+          <button
             onClick={() => router.back()}
             className="absolute left-4 top-4 flex items-center gap-2 rounded-full bg-background/80 px-3 py-1.5 text-sm backdrop-blur-sm transition-colors hover:bg-background"
           >
@@ -121,7 +122,7 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
 
           {/* Edit Button on Thumbnail */}
           {isOwner && (
-            <Link 
+            <Link
               href={`/${username}/${slug}/edit`}
               className="absolute right-4 top-4"
             >
@@ -134,7 +135,7 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
         </div>
       ) : (
         <div className="mb-6 flex items-center justify-between">
-          <button 
+          <button
             onClick={() => router.back()}
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
           >
@@ -158,12 +159,12 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
         <header className={portfolio.thumbnail_url ? '-mt-16 relative z-10' : 'mt-4'}>
           {/* Status Badge (for owner) */}
           {isOwner && portfolio.status !== 'published' && (
-            <Badge 
-              variant={portfolio.status === 'rejected' ? 'destructive' : 'secondary'} 
+            <Badge
+              variant={portfolio.status === 'rejected' ? 'destructive' : 'secondary'}
               className="mb-3"
             >
-              {portfolio.status === 'pending_review' ? 'Menunggu Review' : 
-               portfolio.status === 'draft' ? 'Draft' : portfolio.status}
+              {portfolio.status === 'pending_review' ? 'Menunggu Review' :
+                portfolio.status === 'draft' ? 'Draft' : portfolio.status}
             </Badge>
           )}
 
@@ -208,8 +209,8 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
         <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           {/* Author */}
           {portfolio.user && (
-            <Link 
-              href={`/${portfolio.user.username}`} 
+            <Link
+              href={`/${portfolio.user.username}`}
               className="group flex items-center gap-3"
             >
               <Avatar className="h-11 w-11 ring-2 ring-background">
@@ -312,6 +313,13 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
             </div>
           </div>
         )}
+
+        <Separator className="my-12" />
+
+        {/* Comments Section */}
+        <section id="comments">
+          <CommentSection portfolioId={portfolio.id} />
+        </section>
       </div>
     </article>
   );
