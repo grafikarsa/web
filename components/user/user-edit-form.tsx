@@ -144,6 +144,12 @@ export function UserEditForm({ user }: UserEditFormProps) {
       return;
     }
 
+    // Bypass cropping for GIFs to preserve animation
+    if (file.type === 'image/gif') {
+      handleCropComplete(file, type);
+      return;
+    }
+
     const reader = new FileReader();
     reader.addEventListener('load', () => {
       setCropperImage(reader.result?.toString() || null);
@@ -167,10 +173,12 @@ export function UserEditForm({ user }: UserEditFormProps) {
     if (e.target) e.target.value = '';
   };
 
-  const handleCropComplete = async (croppedFile: File) => {
-    if (cropType === 'avatar') {
+  const handleCropComplete = async (croppedFile: File, typeOverride?: 'avatar' | 'banner') => {
+    const type = typeOverride || cropType;
+
+    if (type === 'avatar') {
       if (croppedFile.size > 2 * 1024 * 1024) {
-        toast.error('Hasil crop terlalu besar (>2MB). Coba zoom out atau pilih gambar lain.');
+        toast.error('File terlalu besar (>2MB).');
         return;
       }
       setAvatarUploading(true);
@@ -187,8 +195,8 @@ export function UserEditForm({ user }: UserEditFormProps) {
         setAvatarUploading(false);
       }
     } else {
-      if (croppedFile.size > 5 * 1024 * 1024) {
-        toast.error('Hasil crop terlalu besar (>5MB).');
+      if (croppedFile.size > 10 * 1024 * 1024) { // Increased limit for banner/GIF
+        toast.error('File terlalu besar (>10MB).');
         return;
       }
       setBannerUploading(true);
@@ -336,8 +344,15 @@ export function UserEditForm({ user }: UserEditFormProps) {
             </div>
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            Klik pada foto profil atau banner untuk mengubahnya
+            Klik pada foto profil atau banner untuk mengubahnya.
           </p>
+          <div className="mt-2 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
+            <span className="font-semibold text-foreground">Catatan untuk Banner GIF:</span>
+            <ul className="mt-1 list-inside list-disc space-y-1">
+              <li>File GIF akan diupload langsung <strong>tanpa cropping</strong> agar animasi tetap berjalan.</li>
+              <li>Disarankan menggunakan resolusi <strong>1500x500 piksel</strong> untuk hasil terbaik.</li>
+            </ul>
+          </div>
         </div>
       </div>
 
