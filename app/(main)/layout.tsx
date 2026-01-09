@@ -5,6 +5,7 @@ import { useUIStore } from '@/lib/stores/ui-store';
 import { GuestNavbar, StudentSidebar, StudentHeader, Footer } from '@/components/layout';
 import { AdminSidebar } from '@/components/layout/admin-sidebar';
 import { AdminHeader } from '@/components/layout/admin-header';
+import { BottomNav } from '@/components/layout/bottom-nav';
 import { Skeleton } from '@/components/ui/skeleton';
 
 function LoadingScreen() {
@@ -62,11 +63,17 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   // Authenticated student/alumni layout
   return (
     <div className="flex min-h-screen">
-      <StudentSidebar />
-      <div className="flex flex-1 flex-col pl-16">
-        <StudentHeader />
-        <main className="flex-1 p-6">{children}</main>
+      {/* Desktop sidebar - hidden on mobile */}
+      <div className="hidden md:block">
+        <StudentSidebar />
       </div>
+      <div className="flex flex-1 flex-col md:pl-16">
+        <StudentHeader />
+        {/* Add pb-20 on mobile for bottom nav clearance */}
+        <main className="flex-1 p-4 pb-24 md:p-6 md:pb-6">{children}</main>
+      </div>
+      {/* Mobile bottom navigation */}
+      <BottomNav />
     </div>
   );
 }
