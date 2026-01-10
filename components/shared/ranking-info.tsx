@@ -83,7 +83,7 @@ export function RankingInfo({ type, triggerClassName, variant = 'ghost' }: Ranki
         <div className="space-y-4">
             <div className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
-                <h3 className="font-semibold">Trending Projects (Guest)</h3>
+                <h3 className="font-semibold">Trending Projects Algorithm</h3>
             </div>
             <p className="text-sm text-muted-foreground">
                 Project ditampilkan berdasarkan kombinasi kualitas karya, popularitas, dan faktor kebaruan.
@@ -167,10 +167,24 @@ export function RankingInfo({ type, triggerClassName, variant = 'ghost' }: Ranki
 
     const Content = () => (
         <div className="grid gap-6 py-4">
-            {(type === 'students' || type === 'all') && <StudentRankingContent />}
-            {type === 'all' && <Separator />}
-            {type === 'projects' && <TrendingProjectContent />}
-            {type === 'all' && <SmartFeedContent />}
+            {/* 1. FYP Algorithm (Priority for logged in users) */}
+            {type === 'all' && (
+                <>
+                    <SmartFeedContent />
+                    <Separator />
+                </>
+            )}
+
+            {/* 2. Top Students */}
+            {(type === 'students' || type === 'all') && (
+                <>
+                    <StudentRankingContent />
+                    {type === 'all' && <Separator />}
+                </>
+            )}
+
+            {/* 3. Top Projects */}
+            {(type === 'projects' || type === 'all') && <TrendingProjectContent />}
 
             <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
                 <p>
@@ -179,6 +193,7 @@ export function RankingInfo({ type, triggerClassName, variant = 'ghost' }: Ranki
             </div>
         </div>
     );
+
     if (isDesktop) {
         return (
             <Dialog open={open} onOpenChange={setOpen}>
@@ -204,7 +219,7 @@ export function RankingInfo({ type, triggerClassName, variant = 'ghost' }: Ranki
     }
 
     return (
-        <Drawer open={open} onOpenChange={setOpen}>
+        <Drawer open={open} onOpenChange={setOpen} snapPoints={[0.5, 1]}>
             <DrawerTrigger asChild>
                 <Button variant={variant} size="icon" className={cn("h-6 w-6 rounded-full text-muted-foreground hover:text-foreground", triggerClassName)}>
                     <Info className="h-4 w-4" />
@@ -234,8 +249,8 @@ export function RankingInfo({ type, triggerClassName, variant = 'ghost' }: Ranki
 function ScoreItem({ icon, label, value, desc, color }: { icon: React.ReactNode, label: string, value: string, desc: string, color: string }) {
     return (
         <div className="flex items-start gap-3 rounded-lg border p-3">
-            <div className={cn("mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-opacity-10 text-white", color.replace('bg-', 'text-').replace('500', '600'), "dark:bg-opacity-20")}>
-                <div className={cn("absolute h-8 w-8 rounded-full opacity-10", color)}></div>
+            <div className={cn("relative mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-opacity-10 text-white", color.replace('bg-', 'text-').replace('500', '600'), "dark:bg-opacity-20")}>
+                <div className={cn("absolute inset-0 h-full w-full rounded-full opacity-10", color)}></div>
                 {icon}
             </div>
             <div className="flex-1 space-y-1">
