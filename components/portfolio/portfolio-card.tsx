@@ -100,7 +100,7 @@ export function PortfolioCard({ portfolio, showStatus = false, showActions = fal
       <Card className="group gap-0 overflow-hidden border py-0 transition-shadow hover:shadow-lg">
         <Link href={`/${resolvedUsername}/${slug}`} className="block p-3">
           {/* Thumbnail */}
-          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-muted">
+          <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted sm:aspect-[4/3] sm:rounded-xl">
             {thumbnail_url ? (
               <Image
                 src={thumbnail_url}
@@ -109,41 +109,41 @@ export function PortfolioCard({ portfolio, showStatus = false, showActions = fal
                 className="object-cover transition-transform group-hover:scale-105"
               />
             ) : (
-              <div className="flex h-full items-center justify-center text-muted-foreground">
+              <div className="flex h-full items-center justify-center text-xs text-muted-foreground sm:text-sm">
                 No Image
               </div>
             )}
           </div>
 
           {/* Tag & Status */}
-          <div className="mt-3 flex items-center justify-between gap-2">
+          <div className="mt-2.5 flex items-center justify-between gap-2 sm:mt-3">
             {firstTag ? (
-              <Badge variant="secondary" className="rounded-full px-2.5 py-0.5 text-xs font-normal">
+              <Badge variant="secondary" className="max-w-[120px] truncate rounded-full px-2 py-0.5 text-[10px] font-normal sm:max-w-none sm:px-2.5 sm:text-xs">
                 {firstTag.nama}
               </Badge>
             ) : (
               <div />
             )}
             {showStatus && status && (
-              <span className={cn('rounded-full px-2.5 py-1 text-xs font-medium', statusStyles[status])}>
+              <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-medium sm:px-2.5 sm:py-1 sm:text-xs', statusStyles[status])}>
                 {statusLabels[status]}
               </span>
             )}
           </div>
 
           {/* Title */}
-          <h3 className="mt-2 line-clamp-2 font-semibold leading-tight group-hover:text-primary">{judul}</h3>
+          <h3 className="mt-1.5 line-clamp-2 text-sm font-semibold leading-tight group-hover:text-primary sm:mt-2 sm:text-base">{judul}</h3>
 
           {/* User Info & Date */}
           {user ? (
-            <div className="mt-3 flex items-center gap-2">
-              <Avatar className="h-8 w-8">
+            <div className="mt-2.5 flex items-center gap-2 sm:mt-3">
+              <Avatar className="h-6 w-6 sm:h-8 sm:w-8">
                 <AvatarImage src={user.avatar_url} alt={user.nama} />
-                <AvatarFallback className="text-xs">{user.nama?.charAt(0)}</AvatarFallback>
+                <AvatarFallback className="text-[10px] sm:text-xs">{user.nama?.charAt(0)}</AvatarFallback>
               </Avatar>
-              <div className="flex flex-col">
-                <span className="text-sm font-medium leading-tight">{user.nama}</span>
-                <span className="text-xs text-muted-foreground">
+              <div className="flex flex-col overflow-hidden">
+                <span className="truncate text-xs font-medium leading-tight sm:text-sm">{user.nama}</span>
+                <span className="truncate text-[10px] text-muted-foreground sm:text-xs">
                   {published_at ? `Posted ${formatDate(published_at)}` : `Dibuat ${formatDate(created_at)}`}
                 </span>
               </div>
