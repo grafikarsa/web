@@ -1,7 +1,11 @@
-import Image from 'next/image';
 import { ContentBlock, TextBlockPayload, ImageBlockPayload, TableBlockPayload, YoutubeBlockPayload, ButtonBlockPayload, EmbedBlockPayload } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { ExternalLink } from 'lucide-react';
+import { ImageWithLightbox } from '@/components/ui/lightbox';
+
+// ...
+
+// ... (imports)
 
 interface BlockRendererProps {
   blocks: ContentBlock[];
@@ -51,7 +55,11 @@ function ImageBlock({ payload }: { payload: ImageBlockPayload }) {
   return (
     <figure className="space-y-2">
       <div className="relative aspect-video overflow-hidden rounded-lg bg-muted">
-        <Image src={payload.url} alt={payload.caption || 'Image'} fill className="object-contain" />
+        <ImageWithLightbox
+          src={payload.url}
+          alt={payload.caption || 'Image'}
+          className="h-full w-full"
+        />
       </div>
       {payload.caption && (
         <figcaption className="text-center text-sm text-muted-foreground">{payload.caption}</figcaption>
@@ -63,11 +71,11 @@ function ImageBlock({ payload }: { payload: ImageBlockPayload }) {
 function TableBlock({ payload }: { payload: TableBlockPayload }) {
   const headers = payload.headers || [];
   const rows = payload.rows || [];
-  
+
   if (headers.length === 0 && rows.length === 0) {
     return null;
   }
-  
+
   return (
     <div className="overflow-x-auto rounded-lg border">
       <table className="w-full">

@@ -5,6 +5,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
+import { notFound } from 'next/navigation';
+
 import { portfoliosApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { BlockRenderer } from '@/components/portfolio/block-renderer';
@@ -14,11 +16,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import { Calendar, Edit, ArrowLeft, Clock, AlertCircle } from 'lucide-react';
+
+import { calculateReadingTime } from '@/lib/utils/reading-time';
+import { ImageWithLightbox } from '@/components/ui/lightbox';
+import { RelatedPortfolios } from '@/components/portfolio/related-portfolios';
+import { Calendar, Edit, ArrowLeft, Clock, AlertCircle, Eye, BookOpen } from 'lucide-react';
 import { PortfolioActions } from '@/components/portfolio/portfolio-actions';
 
 import { formatDate, formatDistanceToNow } from '@/lib/utils/format';
-import { notFound } from 'next/navigation';
 
 interface PortfolioDetailPageProps {
   params: Promise<{ username: string; slug: string }>;
@@ -46,20 +51,17 @@ function PortfolioSkeleton() {
     </div>
   );
 }
+
 export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps) {
   const { username, slug } = use(params);
   const router = useRouter();
-  const { user: currentUser, isAuthenticated } = useAuthStore();
+  const { user: currentUser } = useAuthStore();
   const isOwner = currentUser?.username === username;
-
-  // NOTE: removed useQueryClient here if not needed else where, but keep if useful.
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['portfolio', username, slug],
     queryFn: () => portfoliosApi.getPortfolioBySlug(slug, username),
   });
-
-  // Removed local mutation logic, now in PortfolioActions
 
   if (isLoading) {
     return <PortfolioSkeleton />;
@@ -70,46 +72,14 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
   }
 
   const portfolio = data.data;
+  const readingTime = calculateReadingTime(portfolio.content_blocks);
 
   return (
     <article className="pb-24 md:pb-16">
-      {/* Hero Section - Full Width Thumbnail */}
-      {portfolio.thumbnail_url ? (
-        <div className="relative -mx-6 -mt-6 aspect-video w-[calc(100%+3rem)] overflow-hidden bg-muted md:aspect-[21/9]">
-          <Image
-            src={portfolio.thumbnail_url}
-            alt={portfolio.judul}
-            fill
-            className="object-cover"
-            priority
-          />
-          {/* Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
-
-          {/* Back Button on Thumbnail */}
-          <button
-            onClick={() => router.back()}
-            className="absolute left-4 top-4 flex items-center gap-2 rounded-full bg-background/80 px-3 py-1.5 text-sm backdrop-blur-sm transition-colors hover:bg-background"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Kembali</span>
-          </button>
-
-          {/* Edit Button on Thumbnail */}
-          {isOwner && (
-            <Link
-              href={`/${username}/${slug}/edit`}
-              className="absolute right-4 top-4"
-            >
-              <Button variant="secondary" size="sm" className="backdrop-blur-sm">
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </Button>
-            </Link>
-          )}
-        </div>
-      ) : (
-        <div className="mb-6 flex items-center justify-between">
+      <div className="mx-auto max-w-3xl px-4">
+        {/* Top Navigation */}
+        <div className="mb-6 mt-4 flex items-center justify-between">
+          {/* ... back button code ... */}
           <button
             onClick={() => router.back()}
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
@@ -126,13 +96,10 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
             </Link>
           )}
         </div>
-      )}
 
-      {/* Content Container */}
-      <div className="mx-auto max-w-3xl px-4">
-        {/* Title Section */}
-        <header className={portfolio.thumbnail_url ? '-mt-16 relative z-10' : 'mt-4'}>
-          {/* Status Badge (for owner) */}
+        {/* Header Section */}
+        <header className="mb-8">
+          {/* ... Badge logic ... */}
           {isOwner && portfolio.status !== 'published' && (
             <Badge
               variant={portfolio.status === 'rejected' ? 'destructive' : 'secondary'}
@@ -143,12 +110,10 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
             </Badge>
           )}
 
-          {/* Title */}
           <h1 className="mb-4 text-2xl font-bold leading-tight sm:text-3xl md:text-4xl">
             {portfolio.judul}
           </h1>
 
-          {/* Author & Meta Section - Moved Up */}
           <div className="mb-6 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
             {/* Author */}
             {portfolio.user && (
@@ -171,6 +136,24 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
               {formatDate(portfolio.published_at || portfolio.created_at)}
             </span>
 
+            {/* Reading Time */}
+            <span className="text-muted-foreground/50">•</span>
+            <span className="flex items-center gap-1.5" title="Estimasi waktu baca">
+              <BookOpen className="h-3.5 w-3.5" />
+              {readingTime} min read
+            </span>
+
+            {/* View Count (if available) */}
+            {portfolio.view_count !== undefined && (
+              <>
+                <span className="text-muted-foreground/50">•</span>
+                <span className="flex items-center gap-1.5" title={`${portfolio.view_count} kali dilihat`}>
+                  <Eye className="h-3.5 w-3.5" />
+                  {portfolio.view_count}
+                </span>
+              </>
+            )}
+
             {portfolio.updated_at && portfolio.updated_at !== portfolio.created_at && (
               <>
                 <span className="text-muted-foreground/50">•</span>
@@ -182,6 +165,17 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
             )}
           </div>
 
+          {/* Thumbnail with Lightbox */}
+          {portfolio.thumbnail_url && (
+            <div className="relative mb-6 aspect-video w-full overflow-hidden rounded-lg bg-muted">
+              <ImageWithLightbox
+                src={portfolio.thumbnail_url}
+                alt={portfolio.judul}
+                className="object-contain" // Keep object-contain as requested
+              />
+            </div>
+          )}
+
           {/* Tags */}
           {portfolio.tags && portfolio.tags.length > 0 && (
             <div className="flex flex-wrap gap-2">
@@ -191,7 +185,6 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
                 </Badge>
               ))}
 
-              {/* Series Badge */}
               {portfolio.series && (
                 <Badge className="bg-blue-500 font-normal text-white hover:bg-blue-600">
                   {portfolio.series.nama}
@@ -201,9 +194,9 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
           )}
         </header>
 
-        {/* Admin Review Note */}
+        {/* ... Admin Note ... */}
         {isOwner && portfolio.admin_review_note && (
-          <div className="mt-6 flex gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
+          <div className="mb-8 flex gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
             <AlertCircle className="h-5 w-5 shrink-0 text-amber-500" />
             <div>
               <p className="text-sm font-medium text-amber-700 dark:text-amber-400">Catatan dari Admin</p>
@@ -212,7 +205,7 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
           </div>
         )}
 
-        <Separator className="my-8" />
+        <Separator className="mb-8 mt-4" />
 
         {/* Content Blocks */}
         {portfolio.content_blocks && portfolio.content_blocks.length > 0 ? (
@@ -244,13 +237,21 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
                   <span>@{portfolio.user.username}</span>
                   {portfolio.user.kelas_nama && <span>• {portfolio.user.kelas_nama}</span>}
                 </div>
-                {/* Bio or other info could go here */}
               </div>
               <Link href={`/${portfolio.user.username}`}>
                 <Button variant="outline">Lihat Profil</Button>
               </Link>
             </div>
           </div>
+        )}
+
+        {/* Related Portfolios */}
+        {portfolio.user && (
+          <RelatedPortfolios
+            userId={portfolio.user.id}
+            currentPortfolioId={portfolio.id}
+            username={portfolio.user.username}
+          />
         )}
 
         <Separator className="my-12" />

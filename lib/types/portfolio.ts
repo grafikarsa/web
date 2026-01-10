@@ -100,6 +100,7 @@ export interface Portfolio {
   tags?: Tag[];
   series?: PortfolioSeries | null;
   content_blocks?: ContentBlock[];
+  view_count?: number;
 }
 
 export interface PortfolioCard {
@@ -112,6 +113,7 @@ export interface PortfolioCard {
   updated_at: string;
   status?: PortfolioStatus;
   like_count?: number;
+  view_count?: number;
   user?: UserCard & { kelas_nama?: string };
   tags?: Tag[];
   series?: PortfolioSeries | null;
