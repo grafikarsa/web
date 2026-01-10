@@ -3,11 +3,12 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LogOut } from 'lucide-react';
+import { LogOut, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useThemeValue } from '@/lib/hooks/use-theme-value';
 import { ThemeToggle } from './theme-toggle';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 
 const pageTitles: Record<string, string> = {
   '/': 'Feed',
@@ -27,6 +28,7 @@ export function StudentHeader() {
     if (pathname.includes('/portfolios/new')) return 'Buat Portofolio';
     if (pathname.includes('/followers')) return 'Followers';
     if (pathname.includes('/following')) return 'Following';
+    if (pathname.includes('/settings')) return 'Pengaturan';
     return '';
   };
 
@@ -38,13 +40,30 @@ export function StudentHeader() {
       : '/images/logos/logo_black.svg';
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background px-6">
-      <h1 className="text-lg font-semibold">{title || 'Grafikarsa'}</h1>
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background px-4 md:px-6">
+      {/* Mobile: Logo on left */}
+      <div className="flex items-center gap-2 md:hidden">
+        <Link href="/" className="flex items-center gap-2">
+          {mounted && (
+            <Image
+              src={logoSrc}
+              alt="Grafikarsa"
+              width={24}
+              height={24}
+              className="h-6 w-6"
+            />
+          )}
+          <span className="font-semibold">Grafikarsa</span>
+        </Link>
+      </div>
 
-      {/* Center Logo */}
+      {/* Desktop: Page title on left */}
+      <h1 className="hidden text-lg font-semibold md:block">{title || 'Grafikarsa'}</h1>
+
+      {/* Desktop: Center Logo */}
       <Link
         href="/"
-        className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2"
+        className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-2 md:flex"
       >
         {mounted && (
           <Image
@@ -58,7 +77,18 @@ export function StudentHeader() {
         <span className="font-semibold">Grafikarsa</span>
       </Link>
 
-      <div className="flex items-center gap-2">
+      {/* Mobile: Settings + Notification on right */}
+      <div className="flex items-center gap-1 md:hidden">
+        <Link href="/settings">
+          <Button variant="ghost" size="icon" className="h-9 w-9">
+            <Settings className="h-5 w-5" />
+          </Button>
+        </Link>
+        <NotificationBell />
+      </div>
+
+      {/* Desktop: Theme toggle + Logout on right */}
+      <div className="hidden items-center gap-2 md:flex">
         <ThemeToggle />
         <Button
           variant="ghost"

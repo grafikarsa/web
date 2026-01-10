@@ -76,7 +76,7 @@ export function FeedbackButton() {
                 <Button
                     variant="default"
                     size="icon"
-                    className="fixed bottom-6 right-6 z-50 h-12 w-12 rounded-full shadow-lg transition-transform hover:scale-105"
+                    className="fixed bottom-6 right-6 z-50 hidden h-12 w-12 rounded-full shadow-lg transition-transform hover:scale-105 md:flex"
                     aria-label="Kirim Feedback"
                 >
                     <MessageSquarePlus className="h-6 w-6" />
