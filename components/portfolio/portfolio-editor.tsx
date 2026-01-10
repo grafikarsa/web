@@ -61,7 +61,7 @@ import { portfoliosApi, tagsApi } from '@/lib/api';
 import { seriesApi } from '@/lib/api/public';
 import { uploadsApi } from '@/lib/api/admin';
 import { useAuthStore } from '@/lib/stores/auth-store';
-import { Portfolio, Tag, Series, ContentBlockType } from '@/lib/types';
+import { Portfolio, Tag, Series, ContentBlockType, ContentBlockPayload } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 // Types
@@ -108,7 +108,7 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
   // Form state
   const [judul, setJudul] = useState(portfolio?.judul || '');
   const [selectedTags, setSelectedTags] = useState<Tag[]>(portfolio?.tags || []);
-  const [selectedSeries, setSelectedSeries] = useState<Series | null>(portfolio?.series || null);
+  const [selectedSeries, setSelectedSeries] = useState<Series | null>((portfolio?.series as Series | null) || null);
   const [pendingSeriesChange, setPendingSeriesChange] = useState<Series | null>(null);
   const [showSeriesConfirm, setShowSeriesConfirm] = useState(false);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
@@ -413,10 +413,10 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
           await portfoliosApi.addBlock(portfolioId, {
             block_type: block.block_type,
             block_order: i,
-            payload: blockPayload,
+            payload: blockPayload as unknown as ContentBlockPayload,
           });
         } else {
-          await portfoliosApi.updateBlock(portfolioId, block.id, { payload: blockPayload });
+          await portfoliosApi.updateBlock(portfolioId, block.id, { payload: blockPayload as unknown as ContentBlockPayload });
         }
       }
 
@@ -851,9 +851,9 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 md:left-[calc(50%+32px)]"
+          className="fixed bottom-20 left-1/2 z-[90] -translate-x-1/2 md:bottom-6 md:left-[calc(50%+32px)]"
         >
-          <div className="flex items-center gap-2 rounded-full border bg-card/95 p-2 shadow-2xl backdrop-blur-lg">
+          <div className="flex items-center gap-1.5 rounded-full border bg-card/95 p-1.5 shadow-2xl backdrop-blur-lg sm:gap-2 sm:p-2">
             {/* Delete/Archive Actions */}
             {(canDelete || canArchive) && (
               <>
@@ -977,7 +977,7 @@ function ContentBlockEditor({
   onRemove: () => void;
   onDuplicate: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ 
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: block.id,
     disabled: isLocked, // Disable drag when locked
   });
@@ -1212,11 +1212,11 @@ function ContentBlockEditor({
                       placeholder="https://..."
                     />
                   </div>
-                  {block.payload.text && block.payload.url && (
+                  {(block.payload.text as string) && (block.payload.url as string) && (
                     <div className="flex justify-center rounded-lg bg-muted/50 p-4">
                       <Button variant="default" asChild>
                         <a href={block.payload.url as string} target="_blank" rel="noopener noreferrer">
-                          {block.payload.text as string}
+                          {String(block.payload.text)}
                         </a>
                       </Button>
                     </div>
@@ -1363,12 +1363,12 @@ function ContentBlockEditor({
                     placeholder="Judul embed (opsional)"
                     className="text-sm"
                   />
-                  {block.payload.html && (
+                  {(block.payload.html as string) && (
                     <div className="rounded-lg border bg-muted/30 p-4">
                       <p className="text-xs text-muted-foreground mb-2">Preview:</p>
                       <div
                         className="overflow-hidden rounded"
-                        dangerouslySetInnerHTML={{ __html: block.payload.html as string }}
+                        dangerouslySetInnerHTML={{ __html: String(block.payload.html) }}
                       />
                     </div>
                   )}
