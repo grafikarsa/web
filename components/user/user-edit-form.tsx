@@ -282,7 +282,7 @@ export function UserEditForm({ user }: UserEditFormProps) {
           onClick={() => !bannerUploading && bannerInputRef.current?.click()}
         >
           {bannerUrl ? (
-            <Image src={bannerUrl} alt="Banner" fill className="object-cover" />
+            <Image src={bannerUrl} alt="Banner" fill className="object-cover" unoptimized />
           ) : null}
           {/* Banner Overlay */}
           <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-all hover:bg-black/40">
