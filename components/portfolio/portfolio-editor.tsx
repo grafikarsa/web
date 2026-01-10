@@ -569,13 +569,13 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
             </div>
           ) : (
             <label className="group flex aspect-[21/9] w-full cursor-pointer flex-col items-center justify-center bg-gradient-to-br from-muted/50 to-muted transition-colors hover:from-muted hover:to-muted/80">
-              <div className="flex flex-col items-center">
-                <div className="rounded-full bg-primary/10 p-4 transition-transform group-hover:scale-110">
-                  <ImageIcon className="h-8 w-8 text-primary" />
+              <div className="flex flex-col items-center p-4 text-center">
+                <div className="rounded-full bg-primary/10 p-3 transition-transform group-hover:scale-110 md:p-4">
+                  <ImageIcon className="h-6 w-6 text-primary md:h-8 md:w-8" />
                 </div>
-                <span className="mt-4 text-sm font-medium">Tambahkan Thumbnail</span>
-                <span className="mt-1 text-xs text-muted-foreground">Gambar utama yang menarik perhatian</span>
-                <span className="mt-2 text-xs text-muted-foreground">PNG, JPG, WebP • Max 5MB</span>
+                <span className="mt-3 text-sm font-medium md:mt-4">Tambahkan Thumbnail</span>
+                <span className="mt-1 text-xs text-muted-foreground">Gambar utama menarik</span>
+                <span className="mt-1 text-[10px] text-muted-foreground md:mt-2 md:text-xs">PNG, JPG, WebP • Max 5MB</span>
               </div>
               <input type="file" accept="image/*" className="hidden" onChange={handleThumbnailChange} />
             </label>
@@ -598,7 +598,7 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
             value={judul}
             onChange={(e) => setJudul(e.target.value)}
             placeholder="Masukkan judul portfolio..."
-            className="h-14 rounded-xl border-2 bg-muted/30 px-4 text-xl font-semibold transition-colors focus:border-primary focus:bg-background sm:text-2xl"
+            className="h-12 rounded-xl border-2 bg-muted/30 px-4 text-lg font-semibold transition-colors focus:border-primary focus:bg-background sm:h-14 sm:text-2xl"
           />
         </motion.div>
 
