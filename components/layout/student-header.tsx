@@ -79,10 +79,11 @@ export function StudentHeader() {
 
       {/* Mobile: Settings + Notification on right */}
       <div className="flex items-center gap-1 md:hidden">
-        <Link href="/settings">
-          <Button variant="ghost" size="icon" className="h-9 w-9">
-            <Settings className="h-5 w-5" />
-          </Button>
+        <Link
+          href="/settings"
+          className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        >
+          <Settings className="h-5 w-5" />
         </Link>
         <NotificationBell />
       </div>
