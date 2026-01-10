@@ -63,7 +63,7 @@ export function UserProfile({ profile }: UserProfileProps) {
     <>
       {/* Banner - Full width, edge-to-edge */}
       {/* Counteracting MainLayout padding: p-4 (mobile) and p-6 (desktop) */}
-      <div className="-mx-4 -mt-4 relative w-[calc(100%+2rem)] aspect-[3/1] bg-gradient-to-r from-primary/20 to-primary/10 md:-mx-6 md:-mt-6 md:w-[calc(100%+3rem)]">
+      <div className="-mx-4 -mt-4 relative w-[calc(100%+2rem)] aspect-[3/1] md:aspect-auto md:h-80 bg-gradient-to-r from-primary/20 to-primary/10 md:-mx-6 md:-mt-6 md:w-[calc(100%+3rem)]">
         {profile.banner_url && (
           <Image
             src={profile.banner_url ?? ''}
