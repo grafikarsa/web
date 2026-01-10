@@ -4,7 +4,7 @@ import { use } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { portfoliosApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { BlockRenderer } from '@/components/portfolio/block-renderer';
@@ -14,10 +14,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import { Heart, Share2, Calendar, Edit, ArrowLeft, Clock, AlertCircle } from 'lucide-react';
+import { Calendar, Edit, ArrowLeft, Clock, AlertCircle } from 'lucide-react';
+import { PortfolioActions } from '@/components/portfolio/portfolio-actions';
 
 import { formatDate, formatDistanceToNow } from '@/lib/utils/format';
-import { toast } from 'sonner';
 import { notFound } from 'next/navigation';
 
 interface PortfolioDetailPageProps {
@@ -46,45 +46,20 @@ function PortfolioSkeleton() {
     </div>
   );
 }
-
 export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps) {
   const { username, slug } = use(params);
   const router = useRouter();
   const { user: currentUser, isAuthenticated } = useAuthStore();
-  const queryClient = useQueryClient();
   const isOwner = currentUser?.username === username;
-  const isAdmin = currentUser?.role === 'admin';
+
+  // NOTE: removed useQueryClient here if not needed else where, but keep if useful.
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['portfolio', username, slug],
     queryFn: () => portfoliosApi.getPortfolioBySlug(slug, username),
   });
 
-  const likeMutation = useMutation({
-    mutationFn: () => {
-      const portfolio = data?.data;
-      if (!portfolio) throw new Error('Portfolio not found');
-      return portfolio.is_liked
-        ? portfoliosApi.unlikePortfolio(portfolio.id)
-        : portfoliosApi.likePortfolio(portfolio.id);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['portfolio', username, slug] });
-    },
-    onError: () => {
-      toast.error('Gagal. Silakan coba lagi.');
-    },
-  });
-
-  const handleShare = async () => {
-    const url = window.location.href;
-    if (navigator.share) {
-      await navigator.share({ title: data?.data?.judul, url });
-    } else {
-      await navigator.clipboard.writeText(url);
-      toast.success('Link berhasil disalin!');
-    }
-  };
+  // Removed local mutation logic, now in PortfolioActions
 
   if (isLoading) {
     return <PortfolioSkeleton />;
@@ -97,10 +72,10 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
   const portfolio = data.data;
 
   return (
-    <article className="pb-16">
+    <article className="pb-24 md:pb-16">
       {/* Hero Section - Full Width Thumbnail */}
       {portfolio.thumbnail_url ? (
-        <div className="relative -mx-6 -mt-6 aspect-[21/9] w-[calc(100%+3rem)] overflow-hidden bg-muted">
+        <div className="relative -mx-6 -mt-6 aspect-video w-[calc(100%+3rem)] overflow-hidden bg-muted md:aspect-[21/9]">
           <Image
             src={portfolio.thumbnail_url}
             alt={portfolio.judul}
@@ -169,27 +144,59 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
           )}
 
           {/* Title */}
-          <h1 className="text-2xl font-bold leading-tight sm:text-3xl md:text-4xl">
+          <h1 className="mb-4 text-2xl font-bold leading-tight sm:text-3xl md:text-4xl">
             {portfolio.judul}
           </h1>
 
+          {/* Author & Meta Section - Moved Up */}
+          <div className="mb-6 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+            {/* Author */}
+            {portfolio.user && (
+              <Link
+                href={`/${portfolio.user.username}`}
+                className="flex items-center gap-2 transition-colors hover:text-foreground"
+              >
+                <Avatar className="h-6 w-6 ring-1 ring-border">
+                  <AvatarImage src={portfolio.user.avatar_url} alt={portfolio.user.nama} />
+                  <AvatarFallback>{portfolio.user.nama?.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <span className="font-medium text-foreground">{portfolio.user.nama}</span>
+              </Link>
+            )}
+
+            <span className="text-muted-foreground/50">•</span>
+
+            {/* Date */}
+            <span className="flex items-center gap-1.5">
+              {formatDate(portfolio.published_at || portfolio.created_at)}
+            </span>
+
+            {portfolio.updated_at && portfolio.updated_at !== portfolio.created_at && (
+              <>
+                <span className="text-muted-foreground/50">•</span>
+                <span className="flex items-center gap-1.5" title={`Diperbarui ${formatDistanceToNow(portfolio.updated_at)}`}>
+                  <Clock className="h-3.5 w-3.5" />
+                  Updated
+                </span>
+              </>
+            )}
+          </div>
+
           {/* Tags */}
           {portfolio.tags && portfolio.tags.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2">
               {portfolio.tags.map((tag) => (
-                <Badge key={tag.id} variant="outline" className="font-normal">
+                <Badge key={tag.id} variant="secondary" className="font-normal">
                   {tag.nama}
                 </Badge>
               ))}
-            </div>
-          )}
 
-          {/* Series */}
-          {portfolio.series && (
-            <div className="mt-3">
-              <Badge className="bg-blue-500 font-normal text-white hover:bg-blue-600">
-                {portfolio.series.nama}
-              </Badge>
+              {/* Series Badge */}
+              {portfolio.series && (
+                <Badge className="bg-blue-500 font-normal text-white hover:bg-blue-600">
+                  {portfolio.series.nama}
+                </Badge>
+              )}
             </div>
           )}
         </header>
@@ -205,38 +212,6 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
           </div>
         )}
 
-        {/* Author & Meta Section */}
-        <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          {/* Author */}
-          {portfolio.user && (
-            <Link
-              href={`/${portfolio.user.username}`}
-              className="group flex items-center gap-3"
-            >
-              <Avatar className="h-11 w-11 ring-2 ring-background">
-                <AvatarImage src={portfolio.user.avatar_url} alt={portfolio.user.nama} />
-                <AvatarFallback>{portfolio.user.nama?.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-medium group-hover:underline">{portfolio.user.nama}</p>
-                <p className="text-sm text-muted-foreground">
-                  @{portfolio.user.username}
-                  {portfolio.user.kelas_nama && ` · ${portfolio.user.kelas_nama}`}
-                </p>
-              </div>
-            </Link>
-          )}
-
-          {/* Meta Info */}
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <Calendar className="h-4 w-4" />
-              {formatDate(portfolio.published_at || portfolio.created_at)}
-            </span>
-
-          </div>
-        </div>
-
         <Separator className="my-8" />
 
         {/* Content Blocks */}
@@ -250,50 +225,13 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
           </div>
         )}
 
-        <Separator className="my-8" />
-
-        {/* Actions Footer */}
-        <footer className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          {/* Like & Share */}
-          <div className="flex items-center gap-3">
-            {isAuthenticated ? (
-              <Button
-                variant={portfolio.is_liked ? 'default' : 'outline'}
-                onClick={() => likeMutation.mutate()}
-                disabled={likeMutation.isPending}
-                className="gap-2"
-              >
-                <Heart className={`h-4 w-4 ${portfolio.is_liked ? 'fill-current' : ''}`} />
-                <span>{portfolio.like_count || 0}</span>
-                <span className="hidden sm:inline">Suka</span>
-              </Button>
-            ) : (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Heart className="h-4 w-4" />
-                <span>{portfolio.like_count || 0} suka</span>
-              </div>
-            )}
-            <Button variant="outline" onClick={handleShare} className="gap-2">
-              <Share2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Bagikan</span>
-            </Button>
-          </div>
-
-          {/* Timestamp */}
-          {portfolio.updated_at && portfolio.updated_at !== portfolio.created_at && (
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Clock className="h-3.5 w-3.5" />
-              Diperbarui {formatDistanceToNow(portfolio.updated_at)}
-            </p>
-          )}
-        </footer>
-
-        {/* Author Card */}
+        {/* Author Card (Bottom) */}
         {portfolio.user && (
-          <div className="mt-12 rounded-xl border bg-card p-6">
-            <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+          <div className="mt-16 rounded-xl border bg-card p-6">
+            <div className="mb-4 text-sm font-medium text-muted-foreground">Tentang Penulis</div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
               <Link href={`/${portfolio.user.username}`}>
-                <Avatar className="h-16 w-16">
+                <Avatar className="h-16 w-16 border">
                   <AvatarImage src={portfolio.user.avatar_url} alt={portfolio.user.nama} />
                   <AvatarFallback className="text-xl">{portfolio.user.nama?.charAt(0)}</AvatarFallback>
                 </Avatar>
@@ -302,10 +240,11 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
                 <Link href={`/${portfolio.user.username}`} className="hover:underline">
                   <h3 className="text-lg font-semibold">{portfolio.user.nama}</h3>
                 </Link>
-                <p className="text-sm text-muted-foreground">@{portfolio.user.username}</p>
-                {portfolio.user.kelas_nama && (
-                  <p className="mt-1 text-sm text-muted-foreground">{portfolio.user.kelas_nama}</p>
-                )}
+                <div className="flex gap-2 text-sm text-muted-foreground">
+                  <span>@{portfolio.user.username}</span>
+                  {portfolio.user.kelas_nama && <span>• {portfolio.user.kelas_nama}</span>}
+                </div>
+                {/* Bio or other info could go here */}
               </div>
               <Link href={`/${portfolio.user.username}`}>
                 <Button variant="outline">Lihat Profil</Button>
@@ -321,6 +260,17 @@ export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps
           <CommentSection portfolioId={portfolio.id} />
         </section>
       </div>
+
+      <PortfolioActions
+        portfolio={{
+          id: portfolio.id,
+          judul: portfolio.judul,
+          is_liked: portfolio.is_liked ?? false,
+          like_count: portfolio.like_count ?? 0,
+          username: portfolio.user?.username ?? '',
+          slug: portfolio.slug
+        }}
+      />
     </article>
   );
 }
