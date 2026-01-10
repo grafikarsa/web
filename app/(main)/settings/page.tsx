@@ -63,7 +63,7 @@ export default function SettingsPage() {
                                 Bantu kami meningkatkan Grafikarsa.
                             </DrawerDescription>
                         </DrawerHeader>
-                        <div className="px-4 pb-8">
+                        <div className="px-4 pb-24">
                             <FeedbackForm onSuccess={() => setFeedbackOpen(false)} onCancel={() => setFeedbackOpen(false)} />
                         </div>
                     </DrawerContent>

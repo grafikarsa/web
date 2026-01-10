@@ -279,18 +279,26 @@ export default function UsersPage() {
 
           {/* Pagination */}
           {meta && meta.total_pages > 1 && (
-            <div className="mt-10 flex items-center justify-center gap-2">
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => handlePageChange(page - 1)}
                 disabled={page <= 1}
+                className="h-9 px-3"
               >
-                <ChevronLeft className="h-4 w-4" />
-                Sebelumnya
+                <ChevronLeft className="mr-1 h-4 w-4" />
+                <span className="hidden sm:inline">Sebelumnya</span>
+                <span className="sm:hidden">Prev</span>
               </Button>
 
-              <div className="flex items-center gap-1">
+              {/* Mobile Page Indicator */}
+              <span className="text-sm font-medium text-muted-foreground sm:hidden">
+                {page} / {meta.total_pages}
+              </span>
+
+              {/* Desktop Pagination Numbers */}
+              <div className="hidden items-center gap-1 sm:flex">
                 {Array.from({ length: meta.total_pages }, (_, i) => i + 1)
                   .filter((p) => {
                     // Show first, last, current, and adjacent pages
@@ -326,9 +334,11 @@ export default function UsersPage() {
                 size="sm"
                 onClick={() => handlePageChange(page + 1)}
                 disabled={page >= (meta?.total_pages || 1)}
+                className="h-9 px-3"
               >
-                Selanjutnya
-                <ChevronRight className="h-4 w-4" />
+                <span className="hidden sm:inline">Selanjutnya</span>
+                <span className="sm:hidden">Next</span>
+                <ChevronRight className="ml-1 h-4 w-4" />
               </Button>
             </div>
           )}
