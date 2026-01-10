@@ -187,11 +187,11 @@ export default function PortfoliosPage() {
   };
 
   return (
-    <div className="container mx-auto px-6 pb-12 pt-24 md:px-12 lg:px-16">
+    <div className="container mx-auto px-4 pb-24 pt-20 md:px-12 lg:px-16 md:pt-24">
       {/* Header - Centered */}
-      <div className="mx-auto mb-8 max-w-2xl text-center">
-        <h1 className="mb-2 text-3xl font-bold md:text-4xl">Katalog Portofolio</h1>
-        <p className="text-muted-foreground">
+      <div className="mx-auto mb-6 max-w-2xl text-center md:mb-8">
+        <h1 className="mb-2 text-2xl font-bold md:text-4xl">Katalog Portofolio</h1>
+        <p className="text-sm text-muted-foreground md:text-base">
           Jelajahi karya-karya terbaik dari siswa dan alumni SMKN 4 Malang
         </p>
       </div>
@@ -208,16 +208,16 @@ export default function PortfoliosPage() {
               className="rounded-full pl-11"
             />
           </div>
-          <Button type="submit" className="rounded-full">
+          <Button type="submit" className="rounded-full px-6">
             Cari
           </Button>
         </div>
       </form>
 
-      {/* Filters - Centered */}
-      <div className="mx-auto mb-6 flex max-w-3xl flex-wrap items-center justify-center gap-3">
+      {/* Filters - Grid on mobile, Flex on desktop */}
+      <div className="mx-auto mb-6 grid grid-cols-2 gap-2 sm:flex sm:max-w-4xl sm:justify-center sm:gap-3">
         <Select value={jurusanKode} onValueChange={handleJurusanChange}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Jurusan" />
           </SelectTrigger>
           <SelectContent>
@@ -231,7 +231,7 @@ export default function PortfoliosPage() {
         </Select>
 
         <Select value={kelasNama} onValueChange={(v) => updateParams({ kelas: v === 'all' ? null : v })}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue placeholder="Kelas" />
           </SelectTrigger>
           <SelectContent>
@@ -245,7 +245,7 @@ export default function PortfoliosPage() {
         </Select>
 
         <Select value={seriesId} onValueChange={(v) => updateParams({ series: v === 'all' ? null : v })}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Series" />
           </SelectTrigger>
           <SelectContent>
@@ -260,7 +260,7 @@ export default function PortfoliosPage() {
         </Select>
 
         <Select value={sortBy} onValueChange={(v) => updateParams({ sort: v === '-published_at' ? null : v })}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue placeholder="Urutkan" />
           </SelectTrigger>
           <SelectContent>
@@ -271,7 +271,7 @@ export default function PortfoliosPage() {
         </Select>
 
         {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="col-span-2 h-10 gap-1 sm:col-span-1 sm:h-9">
             <X className="h-4 w-4" />
             Reset
           </Button>
@@ -325,7 +325,7 @@ export default function PortfoliosPage() {
         </div>
       ) : (
         <>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
             {portfolios.map((portfolio) => (
               <PortfolioCard key={portfolio.id} portfolio={portfolio} />
             ))}

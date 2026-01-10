@@ -62,30 +62,30 @@ export function UserProfile({ profile }: UserProfileProps) {
   return (
     <div>
       {/* Banner - Full width, edge-to-edge */}
-      <div className="-mx-6 -mt-6 relative h-48 w-[calc(100%+3rem)] bg-gradient-to-r from-primary/20 to-primary/10 md:h-56">
+      <div className="-mx-4 -mt-6 md:-mx-12 lg:-mx-16 relative h-32 w-[calc(100%+2rem)] md:h-56 md:w-[calc(100%+6rem)] lg:w-[calc(100%+8rem)] bg-gradient-to-r from-primary/20 to-primary/10">
         {profile.banner_url && (
           <Image src={profile.banner_url} alt="Banner" fill className="object-cover" unoptimized />
         )}
       </div>
 
       {/* Profile Content */}
-      <div className="container mx-auto max-w-5xl px-6 md:px-12 lg:px-16">
+      <div className="container mx-auto max-w-5xl px-4 md:px-12 lg:px-16">
         {/* Avatar & Actions Row */}
         <div className="relative flex items-end justify-between">
           {/* Avatar - overlapping banner */}
-          <Avatar className="-mt-16 h-28 w-28 border-4 border-background md:h-32 md:w-32">
+          <Avatar className="-mt-10 h-20 w-20 border-4 border-background md:-mt-16 md:h-32 md:w-32 shadow-sm">
             <AvatarImage src={profile.avatar_url} alt={profile.nama} />
-            <AvatarFallback className="text-3xl md:text-4xl">
+            <AvatarFallback className="text-2xl md:text-4xl">
               {profile.nama?.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
 
           {/* Actions */}
-          <div className="flex gap-2 pb-2">
+          <div className="flex gap-2 pb-0 md:pb-2">
             {isOwner ? (
               <Link href={`/${profile.username}/edit`}>
-                <Button variant="outline" size="sm">
-                  <Edit className="mr-2 h-4 w-4" />
+                <Button variant="outline" size="sm" className="h-8 text-xs md:h-9 md:text-sm">
+                  <Edit className="mr-2 h-3 w-3 md:h-4 md:w-4" />
                   Edit Profil
                 </Button>
               </Link>
@@ -93,10 +93,11 @@ export function UserProfile({ profile }: UserProfileProps) {
               <Button
                 variant={profile.is_following ? 'outline' : 'default'}
                 size="sm"
+                className="h-8 text-xs md:h-9 md:text-sm"
                 onClick={() => followMutation.mutate()}
                 disabled={followMutation.isPending}
               >
-                {followMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {followMutation.isPending && <Loader2 className="mr-2 h-3 w-3 animate-spin md:h-4 md:w-4" />}
                 {profile.is_following ? 'Unfollow' : 'Follow'}
               </Button>
             ) : null}
@@ -104,16 +105,16 @@ export function UserProfile({ profile }: UserProfileProps) {
         </div>
 
         {/* Name & Username */}
-        <div className="mt-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold md:text-3xl">{profile.nama}</h1>
+        <div className="mt-3 md:mt-4">
+          <div className="flex flex-col gap-1 md:flex-row md:items-center md:gap-2">
+            <h1 className="text-xl font-bold md:text-3xl">{profile.nama}</h1>
             {/* Special Role Badges */}
             {profile.special_roles && profile.special_roles.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {profile.special_roles.map((sr) => (
                   <Badge
                     key={sr.id}
-                    className="text-xs font-medium"
+                    className="text-[10px] md:text-xs font-medium px-1.5 py-0 md:px-2.5 md:py-0.5"
                     style={{
                       backgroundColor: generateBgColor(sr.color),
                       color: sr.color,
@@ -127,28 +128,28 @@ export function UserProfile({ profile }: UserProfileProps) {
               </div>
             )}
           </div>
-          <p className="text-muted-foreground">@{profile.username}</p>
+          <p className="text-sm text-muted-foreground md:text-base">@{profile.username}</p>
         </div>
 
         {/* Bio */}
-        {profile.bio && <p className="mt-3 max-w-2xl text-muted-foreground">{profile.bio}</p>}
+        {profile.bio && <p className="mt-2 md:mt-3 max-w-2xl text-sm md:text-base text-muted-foreground">{profile.bio}</p>}
 
         {/* Info Badges */}
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Badge variant="outline" className="capitalize">
+        <div className="mt-3 md:mt-4 flex flex-wrap gap-2">
+          <Badge variant="outline" className="capitalize text-xs md:text-sm">
             {profile.role}
           </Badge>
-          {profile.kelas && <Badge variant="secondary">{profile.kelas.nama}</Badge>}
-          {profile.jurusan && <Badge variant="secondary">{profile.jurusan.nama}</Badge>}
+          {profile.kelas && <Badge variant="secondary" className="text-xs md:text-sm">{profile.kelas.nama}</Badge>}
+          {profile.jurusan && <Badge variant="secondary" className="text-xs md:text-sm">{profile.jurusan.nama}</Badge>}
           {profile.tahun_masuk && (
-            <Badge variant="outline">
+            <Badge variant="outline" className="text-xs md:text-sm">
               {profile.tahun_masuk} - {profile.tahun_lulus || 'Sekarang'}
             </Badge>
           )}
         </div>
 
         {/* Stats */}
-        <div className="mt-5 flex gap-6 text-sm">
+        <div className="mt-4 md:mt-5 flex gap-4 md:gap-6 text-xs md:text-sm">
           <button
             onClick={() => setFollowModalType('followers')}
             className="hover:underline"
@@ -179,7 +180,7 @@ export function UserProfile({ profile }: UserProfileProps) {
 
         {/* Social Links */}
         {profile.social_links && profile.social_links.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-1">
+          <div className="mt-3 md:mt-4 flex flex-wrap gap-1">
             {profile.social_links.map((link) => {
               const Icon = socialIcons[link.platform] || Globe;
               return (
@@ -191,7 +192,7 @@ export function UserProfile({ profile }: UserProfileProps) {
                   className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                   title={link.platform}
                 >
-                  <Icon className="h-5 w-5" />
+                  <Icon className="h-4 w-4 md:h-5 md:w-5" />
                 </a>
               );
             })}
@@ -199,7 +200,7 @@ export function UserProfile({ profile }: UserProfileProps) {
         )}
 
         {/* Divider */}
-        <div className="mb-8 mt-8 border-t" />
+        <div className="mb-6 mt-6 md:mb-8 md:mt-8 border-t" />
       </div>
     </div>
   );
