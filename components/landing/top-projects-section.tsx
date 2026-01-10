@@ -8,6 +8,7 @@ import { PortfolioCard } from '@/components/portfolio/portfolio-card';
 import { topApi } from '@/lib/api/public';
 import { PortfolioCard as PortfolioCardType } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { RankingInfo } from '@/components/shared/ranking-info';
 
 const rankStyles = {
   1: 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700',
@@ -60,7 +61,10 @@ export function TopProjectsSection() {
               <Sparkles className="h-4 w-4" />
               Top Projects
             </div>
-            <h2 className="text-3xl font-semibold tracking-tight">Karya Terbaik</h2>
+            <h2 className="text-3xl font-semibold tracking-tight items-center inline-flex gap-2">
+              Karya Terbaik
+              <RankingInfo type="projects" />
+            </h2>
             <p className="mt-2 text-muted-foreground">Portofolio dengan kualitas dan apresiasi tertinggi</p>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
@@ -85,7 +89,10 @@ export function TopProjectsSection() {
             <Sparkles className="h-4 w-4" />
             Top Projects
           </div>
-          <h2 className="text-3xl font-semibold tracking-tight">Karya Terbaik</h2>
+          <h2 className="text-3xl font-semibold tracking-tight items-center inline-flex gap-2">
+            Karya Terbaik
+            <RankingInfo type="projects" />
+          </h2>
           <p className="mt-2 text-muted-foreground">Portofolio dengan kualitas dan apresiasi tertinggi</p>
         </div>
         <div className="grid gap-6 md:grid-cols-3">

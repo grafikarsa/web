@@ -20,8 +20,8 @@ export function FeedAlgorithmSwitcher({
       <TabsList className="w-full grid grid-cols-3">
         <TabsTrigger value="smart" disabled={!isAuthenticated} className="gap-1.5">
           <Sparkles className="h-4 w-4" />
-          <span className="hidden sm:inline">Untuk Kamu</span>
-          <span className="sm:hidden">Kamu</span>
+          <span className="hidden sm:inline">FYP</span>
+          <span className="sm:hidden">FYP</span>
         </TabsTrigger>
         <TabsTrigger value="recent" className="gap-1.5">
           <Clock className="h-4 w-4" />

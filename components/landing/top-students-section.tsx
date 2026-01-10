@@ -8,6 +8,7 @@ import { UserCard } from '@/components/user/user-card';
 import { topApi } from '@/lib/api/public';
 import { UserCard as UserCardType } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { RankingInfo } from '@/components/shared/ranking-info';
 
 const rankStyles = {
   1: 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700',
@@ -58,7 +59,10 @@ export function TopStudentsSection() {
               <Trophy className="h-4 w-4" />
               Top Students
             </div>
-            <h2 className="text-3xl font-semibold tracking-tight">Siswa Terbaik</h2>
+            <h2 className="text-3xl font-semibold tracking-tight items-center inline-flex gap-2">
+              Siswa Terbaik
+              <RankingInfo type="students" />
+            </h2>
             <p className="mt-2 text-muted-foreground">Siswa dengan karya dan kontribusi terbaik</p>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
@@ -83,7 +87,10 @@ export function TopStudentsSection() {
             <Trophy className="h-4 w-4" />
             Top Students
           </div>
-          <h2 className="text-3xl font-semibold tracking-tight">Siswa Terbaik</h2>
+          <h2 className="text-3xl font-semibold tracking-tight items-center inline-flex gap-2">
+            Siswa Terbaik
+            <RankingInfo type="students" />
+          </h2>
           <p className="mt-2 text-muted-foreground">Siswa dengan karya dan kontribusi terbaik</p>
         </div>
         <div className="grid gap-6 md:grid-cols-3">

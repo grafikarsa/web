@@ -11,6 +11,7 @@ import { FeedAlgorithmSwitcher } from './feed-algorithm-switcher';
 import { TimelineFeedItem } from './timeline-feed-item';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { RankingInfo } from '@/components/shared/ranking-info';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -195,7 +196,10 @@ export function SmartFeedList() {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
         <div className="p-4">
-          <h1 className="text-xl font-bold mb-3">Feed</h1>
+          <div className="flex items-center gap-2 mb-3">
+            <h1 className="text-xl font-bold">Feed</h1>
+            <RankingInfo type="all" />
+          </div>
           <FeedAlgorithmSwitcher
             value={algorithm}
             onChange={handleAlgorithmChange}
