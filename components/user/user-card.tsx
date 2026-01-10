@@ -50,7 +50,7 @@ export function UserCard({ user }: UserCardProps) {
         </div>
 
         {/* Avatar - overlapping banner */}
-        <div className="relative px-3 sm:px-4">
+        <div className="relative flex justify-center px-3 sm:justify-start sm:px-4">
           <Avatar className="-mt-8 h-16 w-16 border-4 border-background shadow-md sm:-mt-10 sm:h-20 sm:w-20">
             <AvatarImage src={avatar_url || undefined} alt={nama} />
             <AvatarFallback className="bg-primary/10 text-lg font-semibold sm:text-xl">
@@ -60,14 +60,14 @@ export function UserCard({ user }: UserCardProps) {
         </div>
 
         {/* Content */}
-        <div className="p-3 pt-2 sm:p-4 sm:pt-2">
+        <div className="p-3 pt-2 text-center sm:p-4 sm:pt-2 sm:text-left">
           <h3 className="truncate text-sm font-semibold text-foreground transition-colors group-hover:text-primary sm:text-base">
             {nama}
           </h3>
           <p className="truncate text-xs text-muted-foreground sm:text-sm">@{username}</p>
 
           {/* Info */}
-          <div className="mt-2.5 flex flex-wrap items-center gap-1.5 sm:mt-3">
+          <div className="mt-2.5 flex flex-wrap items-center justify-center gap-1.5 sm:mt-3 sm:justify-start">
             <Badge variant="secondary" className="px-1.5 py-0 text-[10px] sm:px-2.5 sm:py-0.5 sm:text-xs">
               {getRoleLabel(role)}
             </Badge>
