@@ -246,23 +246,22 @@ export function RankingInfo({ type, triggerClassName, variant = 'ghost' }: Ranki
     );
 }
 
-function ScoreItem({ icon, label, value, desc, color }: { icon: React.ReactNode, label: string, value: string, desc: string, color: string }) {
+function ScoreItem({ icon, label, value, desc }: { icon: React.ReactNode, label: string, value: string, desc: string, color?: string }) {
     return (
         <div className="flex items-start gap-3 rounded-lg border p-3">
-            <div className={cn("relative mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-opacity-10 text-white", color.replace('bg-', 'text-').replace('500', '600'), "dark:bg-opacity-20")}>
-                <div className={cn("absolute inset-0 h-full w-full rounded-full opacity-10", color)}></div>
+            <div className="relative mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                 {icon}
             </div>
             <div className="flex-1 space-y-1">
                 <div className="flex items-center justify-between">
                     <span className="font-medium text-sm">{label}</span>
-                    <span className={cn("text-xs font-bold px-2 py-0.5 rounded-full bg-opacity-10", color.replace('bg-', 'text-').replace('500', '700'), color.replace('bg-', 'bg-').replace('500', '100'))}>{value}</span>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">{value}</span>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">{desc}</p>
 
                 {/* Visual Progress Bar */}
                 <div className="h-1.5 w-full rounded-full bg-muted mt-2 overflow-hidden">
-                    <div className={cn("h-full rounded-full", color)} style={{ width: value }}></div>
+                    <div className="h-full rounded-full bg-primary" style={{ width: value }}></div>
                 </div>
             </div>
         </div>

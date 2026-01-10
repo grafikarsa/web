@@ -163,11 +163,11 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="container mx-auto px-6 pb-12 pt-24 md:px-12 lg:px-16">
+    <div className="container mx-auto px-4 pb-24 pt-20 md:px-12 lg:px-16 md:pt-24">
       {/* Header - Centered */}
-      <div className="mx-auto mb-8 max-w-2xl text-center">
-        <h1 className="mb-2 text-3xl font-bold md:text-4xl">Siswa & Alumni SMKN 4 Malang</h1>
-        <p className="text-muted-foreground">
+      <div className="mx-auto mb-6 max-w-2xl text-center md:mb-8">
+        <h1 className="mb-2 text-2xl font-bold md:text-4xl">Siswa & Alumni</h1>
+        <p className="text-sm text-muted-foreground md:text-base">
           Temukan dan terhubung dengan warga SMKN 4 Malang
         </p>
       </div>
@@ -178,33 +178,35 @@ export default function UsersPage() {
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Cari berdasarkan nama, username..."
+              placeholder="Cari nama atau username..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               className="rounded-full pl-11"
             />
           </div>
-          <Button type="submit" className="rounded-full">
+          <Button type="submit" className="rounded-full px-6">
             Cari
           </Button>
         </div>
       </form>
 
-      {/* Filters - Centered */}
-      <div className="mx-auto mb-8 flex max-w-3xl flex-wrap items-center justify-center gap-3">
-        <Select value={role} onValueChange={handleRoleChange}>
-          <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder="Role" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Semua Role</SelectItem>
-            <SelectItem value="student">Siswa</SelectItem>
-            <SelectItem value="alumni">Alumni</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* Filters - Grid on mobile, Flex on desktop */}
+      <div className="mx-auto mb-8 grid grid-cols-2 gap-2 sm:flex sm:max-w-3xl sm:justify-center sm:gap-3">
+        <div className="col-span-2 sm:col-span-1">
+          <Select value={role} onValueChange={handleRoleChange}>
+            <SelectTrigger className="w-full sm:w-[140px]">
+              <SelectValue placeholder="Role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Role</SelectItem>
+              <SelectItem value="student">Siswa</SelectItem>
+              <SelectItem value="alumni">Alumni</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
         <Select value={jurusanKode} onValueChange={handleJurusanChange}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Jurusan" />
           </SelectTrigger>
           <SelectContent>
@@ -218,7 +220,7 @@ export default function UsersPage() {
         </Select>
 
         <Select value={kelasNama} onValueChange={handleKelasChange}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue placeholder="Kelas" />
           </SelectTrigger>
           <SelectContent>
@@ -232,9 +234,9 @@ export default function UsersPage() {
         </Select>
 
         {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="col-span-2 h-10 gap-1 sm:col-span-1 sm:h-9">
             <X className="h-4 w-4" />
-            Reset
+            Reset Filter
           </Button>
         )}
       </div>
@@ -269,7 +271,7 @@ export default function UsersPage() {
         </div>
       ) : (
         <>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
             {users.map((user) => (
               <UserCard key={user.id} user={user} />
             ))}
