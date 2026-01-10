@@ -43,7 +43,7 @@ export function ImageWithLightbox({ src, alt, className }: { src: string; alt: s
     return (
         <>
             <div
-                className={`group relative cursor-zoom-in ${className}`}
+                className={`group relative h-full w-full cursor-zoom-in ${className || ''}`}
                 onClick={() => setIsOpen(true)}
             >
                 <Image
