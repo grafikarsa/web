@@ -60,31 +60,38 @@ export function UserProfile({ profile }: UserProfileProps) {
   });
 
   return (
-    <div>
+    <>
       {/* Banner - Full width, edge-to-edge */}
-      <div className="-mx-4 -mt-6 md:-mx-12 lg:-mx-16 relative h-32 w-[calc(100%+2rem)] md:h-56 md:w-[calc(100%+6rem)] lg:w-[calc(100%+8rem)] bg-gradient-to-r from-primary/20 to-primary/10">
+      <div className="relative h-32 w-full bg-gradient-to-r from-primary/20 to-primary/10 md:h-64">
         {profile.banner_url && (
-          <Image src={profile.banner_url} alt="Banner" fill className="object-cover" unoptimized />
+          <Image
+            src={profile.banner_url ?? ''}
+            alt="Banner"
+            fill
+            className="object-cover"
+            priority
+            unoptimized
+          />
         )}
       </div>
 
       {/* Profile Content */}
-      <div className="container mx-auto max-w-5xl px-4 md:px-12 lg:px-16">
+      <div className="container mx-auto max-w-5xl px-4 pb-4 md:px-8">
         {/* Avatar & Actions Row */}
         <div className="relative flex items-end justify-between">
           {/* Avatar - overlapping banner */}
-          <Avatar className="-mt-10 h-20 w-20 border-4 border-background md:-mt-16 md:h-32 md:w-32 shadow-sm">
+          <Avatar className="-mt-10 h-20 w-20 border-4 border-background shadow-sm md:-mt-20 md:h-40 md:w-40">
             <AvatarImage src={profile.avatar_url} alt={profile.nama} />
-            <AvatarFallback className="text-2xl md:text-4xl">
+            <AvatarFallback className="text-2xl md:text-5xl">
               {profile.nama?.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
 
           {/* Actions */}
-          <div className="flex gap-2 pb-0 md:pb-2">
+          <div className="flex gap-2 pb-0 md:pb-4">
             {isOwner ? (
               <Link href={`/${profile.username}/edit`}>
-                <Button variant="outline" size="sm" className="h-8 text-xs md:h-9 md:text-sm">
+                <Button variant="outline" size="sm" className="h-8 text-xs md:h-10 md:px-4 md:text-sm">
                   <Edit className="mr-2 h-3 w-3 md:h-4 md:w-4" />
                   Edit Profil
                 </Button>
@@ -93,7 +100,7 @@ export function UserProfile({ profile }: UserProfileProps) {
               <Button
                 variant={profile.is_following ? 'outline' : 'default'}
                 size="sm"
-                className="h-8 text-xs md:h-9 md:text-sm"
+                className="h-8 text-xs md:h-10 md:px-4 md:text-sm"
                 onClick={() => followMutation.mutate()}
                 disabled={followMutation.isPending}
               >
@@ -105,16 +112,16 @@ export function UserProfile({ profile }: UserProfileProps) {
         </div>
 
         {/* Name & Username */}
-        <div className="mt-3 md:mt-4">
-          <div className="flex flex-col gap-1 md:flex-row md:items-center md:gap-2">
+        <div className="mt-3 md:mt-6">
+          <div className="flex flex-col gap-1 md:flex-row md:items-center md:gap-3">
             <h1 className="text-xl font-bold md:text-3xl">{profile.nama}</h1>
             {/* Special Role Badges */}
             {profile.special_roles && profile.special_roles.length > 0 && (
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1.5">
                 {profile.special_roles.map((sr) => (
                   <Badge
                     key={sr.id}
-                    className="text-[10px] md:text-xs font-medium px-1.5 py-0 md:px-2.5 md:py-0.5"
+                    className="px-1.5 py-0 text-[10px] font-medium md:px-2.5 md:py-0.5 md:text-xs"
                     style={{
                       backgroundColor: generateBgColor(sr.color),
                       color: sr.color,
@@ -127,15 +134,16 @@ export function UserProfile({ profile }: UserProfileProps) {
                 ))}
               </div>
             )}
+            {/* Dev Badge for testing/demo if needed, or based on role */}
+            {profile.role === 'admin' && (
+              <Badge variant="secondary" className="w-fit text-[10px] md:text-xs">Administrator</Badge>
+            )}
           </div>
-          <p className="text-sm text-muted-foreground md:text-base">@{profile.username}</p>
+          <p className="text-sm text-muted-foreground md:text-lg">@{profile.username}</p>
         </div>
 
-        {/* Bio */}
-        {profile.bio && <p className="mt-2 md:mt-3 max-w-2xl text-sm md:text-base text-muted-foreground">{profile.bio}</p>}
-
         {/* Info Badges */}
-        <div className="mt-3 md:mt-4 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2 md:mt-4">
           <Badge variant="outline" className="capitalize text-xs md:text-sm">
             {profile.role}
           </Badge>
@@ -149,38 +157,33 @@ export function UserProfile({ profile }: UserProfileProps) {
         </div>
 
         {/* Stats */}
-        <div className="mt-4 md:mt-5 flex gap-4 md:gap-6 text-xs md:text-sm">
+        <div className="mt-4 flex gap-4 text-xs md:mt-6 md:gap-8 md:text-base">
           <button
             onClick={() => setFollowModalType('followers')}
             className="hover:underline"
           >
-            <span className="font-semibold">{profile.follower_count || 0}</span>{' '}
+            <span className="font-bold text-foreground">{profile.follower_count || 0}</span>{' '}
             <span className="text-muted-foreground">Followers</span>
           </button>
           <button
             onClick={() => setFollowModalType('following')}
             className="hover:underline"
           >
-            <span className="font-semibold">{profile.following_count || 0}</span>{' '}
+            <span className="font-bold text-foreground">{profile.following_count || 0}</span>{' '}
             <span className="text-muted-foreground">Following</span>
           </button>
           <span>
-            <span className="font-semibold">{profile.portfolio_count || 0}</span>{' '}
+            <span className="font-bold text-foreground">{profile.portfolio_count || 0}</span>{' '}
             <span className="text-muted-foreground">Portofolio</span>
           </span>
         </div>
 
-        {/* Follow Modal */}
-        <FollowModal
-          username={profile.username}
-          type={followModalType || 'followers'}
-          open={followModalType !== null}
-          onOpenChange={(open) => !open && setFollowModalType(null)}
-        />
+        {/* Bio */}
+        {profile.bio && <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground md:mt-6 md:text-base">{profile.bio}</p>}
 
         {/* Social Links */}
         {profile.social_links && profile.social_links.length > 0 && (
-          <div className="mt-3 md:mt-4 flex flex-wrap gap-1">
+          <div className="mt-4 flex flex-wrap gap-2 md:mt-6">
             {profile.social_links.map((link) => {
               const Icon = socialIcons[link.platform] || Globe;
               return (
@@ -199,9 +202,17 @@ export function UserProfile({ profile }: UserProfileProps) {
           </div>
         )}
 
+        {/* Follow Modal */}
+        <FollowModal
+          username={profile.username}
+          type={followModalType || 'followers'}
+          open={followModalType !== null}
+          onOpenChange={(open) => !open && setFollowModalType(null)}
+        />
+
         {/* Divider */}
-        <div className="mb-6 mt-6 md:mb-8 md:mt-8 border-t" />
+        <div className="mb-6 mt-6 border-t md:mb-10 md:mt-10" />
       </div>
-    </div>
+    </>
   );
 }
