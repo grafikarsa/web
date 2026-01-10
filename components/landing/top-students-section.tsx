@@ -59,7 +59,7 @@ export function TopStudentsSection() {
               <Trophy className="h-4 w-4" />
               Top Students
             </div>
-            <h2 className="text-3xl font-semibold tracking-tight items-center inline-flex gap-2">
+            <h2 className="text-3xl font-semibold tracking-tight flex justify-center items-center gap-2">
               Siswa Terbaik
               <RankingInfo type="students" />
             </h2>
@@ -87,7 +87,7 @@ export function TopStudentsSection() {
             <Trophy className="h-4 w-4" />
             Top Students
           </div>
-          <h2 className="text-3xl font-semibold tracking-tight items-center inline-flex gap-2">
+          <h2 className="text-3xl font-semibold tracking-tight flex justify-center items-center gap-2">
             Siswa Terbaik
             <RankingInfo type="students" />
           </h2>

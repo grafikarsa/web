@@ -61,7 +61,7 @@ export function TopProjectsSection() {
               <Sparkles className="h-4 w-4" />
               Top Projects
             </div>
-            <h2 className="text-3xl font-semibold tracking-tight items-center inline-flex gap-2">
+            <h2 className="text-3xl font-semibold tracking-tight flex justify-center items-center gap-2">
               Karya Terbaik
               <RankingInfo type="projects" />
             </h2>
@@ -89,7 +89,7 @@ export function TopProjectsSection() {
             <Sparkles className="h-4 w-4" />
             Top Projects
           </div>
-          <h2 className="text-3xl font-semibold tracking-tight items-center inline-flex gap-2">
+          <h2 className="text-3xl font-semibold tracking-tight flex justify-center items-center gap-2">
             Karya Terbaik
             <RankingInfo type="projects" />
           </h2>

@@ -38,7 +38,7 @@ export function RankingInfo({ type, triggerClassName, variant = 'ghost' }: Ranki
 
     const StudentRankingContent = () => (
         <div className="space-y-4">
-            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500">
+            <div className="flex items-center gap-2">
                 <Trophy className="h-5 w-5" />
                 <h3 className="font-semibold">Top Students Algorithm</h3>
             </div>
@@ -81,7 +81,7 @@ export function RankingInfo({ type, triggerClassName, variant = 'ghost' }: Ranki
 
     const TrendingProjectContent = () => (
         <div className="space-y-4">
-            <div className="flex items-center gap-2 text-rose-600 dark:text-rose-500">
+            <div className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
                 <h3 className="font-semibold">Trending Projects (Guest)</h3>
             </div>
@@ -117,7 +117,7 @@ export function RankingInfo({ type, triggerClassName, variant = 'ghost' }: Ranki
 
     const SmartFeedContent = () => (
         <div className="space-y-4">
-            <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-500">
+            <div className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5" />
                 <h3 className="font-semibold">FYP (For You Page) Algorithm</h3>
             </div>
@@ -195,7 +195,9 @@ export function RankingInfo({ type, triggerClassName, variant = 'ghost' }: Ranki
                             Transparansi algoritma penilaian Grafikarsa.
                         </DialogDescription>
                     </DialogHeader>
-                    <Content />
+                    <div className="max-h-[70vh] overflow-y-auto pr-2">
+                        <Content />
+                    </div>
                 </DialogContent>
             </Dialog>
         );
@@ -216,7 +218,7 @@ export function RankingInfo({ type, triggerClassName, variant = 'ghost' }: Ranki
                         Transparansi algoritma penilaian Grafikarsa.
                     </DrawerDescription>
                 </DrawerHeader>
-                <div className="px-4">
+                <div className="px-4 overflow-y-auto max-h-[85vh]">
                     <Content />
                 </div>
                 <DrawerFooter className="pt-2">
