@@ -436,10 +436,17 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
         const block = contentBlocks[i];
         let blockPayload = { ...block.payload };
 
-        if (block.block_type === 'image' && block.pendingFile) {
-          updateProgress(`Mengupload gambar ${i + 1}...`);
-          const imageUrl = await uploadsApi.uploadFile(block.pendingFile, 'portfolio_image', portfolioId);
-          blockPayload = { ...blockPayload, url: imageUrl };
+        // Handle file uploads for image, pdf, and doc blocks
+        if (block.pendingFile) {
+          if (block.block_type === 'image') {
+            updateProgress(`Mengupload gambar ${i + 1}...`);
+            const imageUrl = await uploadsApi.uploadFile(block.pendingFile, 'portfolio_image', portfolioId);
+            blockPayload = { ...blockPayload, url: imageUrl };
+          } else if (block.block_type === 'pdf' || block.block_type === 'doc') {
+            updateProgress(`Mengupload dokumen ${i + 1}...`);
+            const docUrl = await uploadsApi.uploadFile(block.pendingFile, 'document', portfolioId);
+            blockPayload = { ...blockPayload, url: docUrl };
+          }
         } else {
           updateProgress(`Menyimpan konten ${i + 1}...`);
         }
