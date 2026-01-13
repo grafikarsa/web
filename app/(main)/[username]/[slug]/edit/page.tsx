@@ -37,7 +37,7 @@ export default function EditPortfolioPage() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="mx-auto max-w-4xl space-y-6">
+      <div className="mx-auto max-w-3xl space-y-6 px-6">
         <div className="flex items-center gap-4">
           <Skeleton className="h-10 w-10 rounded-full" />
           <Skeleton className="h-8 w-48" />
@@ -63,12 +63,12 @@ export default function EditPortfolioPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-3xl px-6">
       {/* Header */}
       <div className="mb-6 flex items-center gap-4">
-        <Button 
-          variant="ghost" 
-          size="icon" 
+        <Button
+          variant="ghost"
+          size="icon"
           className="h-10 w-10 rounded-full"
           onClick={() => router.back()}
         >

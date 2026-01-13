@@ -27,7 +27,7 @@ export default function CreatePortfolioPage() {
 
   if (authLoading) {
     return (
-      <div className="mx-auto max-w-4xl space-y-6">
+      <div className="mx-auto max-w-3xl space-y-6 px-6">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="aspect-[21/9] w-full rounded-xl" />
         <Skeleton className="h-14 w-full rounded-xl" />
@@ -41,7 +41,7 @@ export default function CreatePortfolioPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-3xl px-6">
       {/* Header */}
       <div className="mb-6 flex items-center gap-4">
         <Link href={`/${username}`}>
