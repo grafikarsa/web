@@ -77,7 +77,7 @@ export function UserProfile({ profile }: UserProfileProps) {
       </div>
 
       {/* Profile Content */}
-      <div className="container mx-auto max-w-5xl px-0 pb-4 md:px-2">
+      <div className="container mx-auto max-w-5xl px-6 pb-4 md:px-12 lg:px-16">
         {/* Avatar & Actions Row */}
         <div className="relative flex items-end justify-between">
           {/* Avatar - overlapping banner */}
