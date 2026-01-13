@@ -173,7 +173,7 @@ export interface ConfirmUploadResponse {
 
 export const uploadsApi = {
   presign: async (data: {
-    upload_type: 'avatar' | 'banner' | 'thumbnail' | 'portfolio_image';
+    upload_type: 'avatar' | 'banner' | 'thumbnail' | 'portfolio_image' | 'document';
     filename: string;
     content_type: string;
     file_size: number;
@@ -191,7 +191,7 @@ export const uploadsApi = {
 
   uploadFile: async (
     file: File,
-    uploadType: 'avatar' | 'banner' | 'thumbnail' | 'portfolio_image',
+    uploadType: 'avatar' | 'banner' | 'thumbnail' | 'portfolio_image' | 'document',
     portfolioId?: string,
     blockId?: string
   ): Promise<string> => {
