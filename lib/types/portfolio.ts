@@ -1,7 +1,20 @@
 import { User, UserCard } from './user';
 
 export type PortfolioStatus = 'draft' | 'pending_review' | 'rejected' | 'published' | 'archived';
-export type ContentBlockType = 'text' | 'image' | 'table' | 'youtube' | 'button' | 'embed';
+export type ContentBlockType =
+  | 'text'
+  | 'image'
+  | 'table'
+  | 'youtube'
+  | 'button'
+  | 'embed'
+  // New block types
+  | 'figma'
+  | 'canva'
+  | 'ppt'
+  | 'pdf'
+  | 'doc'
+  | 'website';
 
 export interface Tag {
   id: string;
@@ -45,7 +58,14 @@ export type ContentBlockPayload =
   | TableBlockPayload
   | YoutubeBlockPayload
   | ButtonBlockPayload
-  | EmbedBlockPayload;
+  | EmbedBlockPayload
+  // New payload types
+  | FigmaBlockPayload
+  | CanvaBlockPayload
+  | PPTBlockPayload
+  | PDFBlockPayload
+  | DocBlockPayload
+  | WebsiteBlockPayload;
 
 export interface TextBlockPayload {
   content: string;
@@ -73,6 +93,41 @@ export interface ButtonBlockPayload {
 
 export interface EmbedBlockPayload {
   html: string;
+  title?: string;
+}
+
+// New payload interfaces for rich embed blocks
+export interface FigmaBlockPayload {
+  url: string;
+  title?: string;
+}
+
+export interface CanvaBlockPayload {
+  url: string;
+  title?: string;
+}
+
+export interface PPTBlockPayload {
+  source: 'google_slides' | 'upload';
+  url: string;
+  title?: string;
+  file_name?: string;
+}
+
+export interface PDFBlockPayload {
+  url: string;
+  title?: string;
+  file_name?: string;
+}
+
+export interface DocBlockPayload {
+  url: string;
+  title?: string;
+  file_name?: string;
+}
+
+export interface WebsiteBlockPayload {
+  url: string;
   title?: string;
 }
 

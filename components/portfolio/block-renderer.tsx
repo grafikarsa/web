@@ -1,11 +1,28 @@
-import { ContentBlock, TextBlockPayload, ImageBlockPayload, TableBlockPayload, YoutubeBlockPayload, ButtonBlockPayload, EmbedBlockPayload } from '@/lib/types';
+import {
+  ContentBlock,
+  TextBlockPayload,
+  ImageBlockPayload,
+  TableBlockPayload,
+  YoutubeBlockPayload,
+  ButtonBlockPayload,
+  EmbedBlockPayload,
+  FigmaBlockPayload,
+  CanvaBlockPayload,
+  PPTBlockPayload,
+  PDFBlockPayload,
+  DocBlockPayload,
+  WebsiteBlockPayload,
+} from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Download, FileText, Globe } from 'lucide-react';
 import { ImageWithLightbox } from '@/components/ui/lightbox';
-
-// ...
-
-// ... (imports)
+import {
+  getFigmaEmbedUrl,
+  getCanvaEmbedUrl,
+  getGoogleSlidesEmbedUrl,
+  getGoogleDocsViewerUrl,
+  isAllowedDomain,
+} from '@/lib/utils/embed-helpers';
 
 interface BlockRendererProps {
   blocks: ContentBlock[];
@@ -37,6 +54,19 @@ function RenderBlock({ block }: { block: ContentBlock }) {
       return <ButtonBlock payload={block.payload as ButtonBlockPayload} />;
     case 'embed':
       return <EmbedBlock payload={block.payload as EmbedBlockPayload} />;
+    // New block types
+    case 'figma':
+      return <FigmaBlock payload={block.payload as FigmaBlockPayload} />;
+    case 'canva':
+      return <CanvaBlock payload={block.payload as CanvaBlockPayload} />;
+    case 'ppt':
+      return <PPTBlock payload={block.payload as PPTBlockPayload} />;
+    case 'pdf':
+      return <PDFBlock payload={block.payload as PDFBlockPayload} />;
+    case 'doc':
+      return <DocBlock payload={block.payload as DocBlockPayload} />;
+    case 'website':
+      return <WebsiteBlock payload={block.payload as WebsiteBlockPayload} />;
     default:
       return null;
   }
@@ -151,3 +181,204 @@ function EmbedBlock({ payload }: { payload: EmbedBlockPayload }) {
     </div>
   );
 }
+
+// ============================================================================
+// NEW BLOCK TYPES
+// ============================================================================
+
+function FigmaBlock({ payload }: { payload: FigmaBlockPayload }) {
+  const embedUrl = getFigmaEmbedUrl(payload.url);
+  if (!embedUrl) {
+    return (
+      <p className="text-sm text-muted-foreground italic">
+        URL Figma tidak valid
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="aspect-video w-full overflow-hidden rounded-lg border shadow-sm">
+        <iframe
+          src={embedUrl}
+          className="h-full w-full"
+          allowFullScreen
+          loading="lazy"
+          title={payload.title || 'Figma Design'}
+        />
+      </div>
+      {payload.title && (
+        <p className="text-center text-sm text-muted-foreground">{payload.title}</p>
+      )}
+    </div>
+  );
+}
+
+function CanvaBlock({ payload }: { payload: CanvaBlockPayload }) {
+  const embedUrl = getCanvaEmbedUrl(payload.url);
+  if (!embedUrl) {
+    return (
+      <p className="text-sm text-muted-foreground italic">
+        URL Canva tidak valid
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="aspect-video w-full overflow-hidden rounded-lg border shadow-sm">
+        <iframe
+          src={embedUrl}
+          className="h-full w-full"
+          allowFullScreen
+          loading="lazy"
+          title={payload.title || 'Canva Design'}
+        />
+      </div>
+      {payload.title && (
+        <p className="text-center text-sm text-muted-foreground">{payload.title}</p>
+      )}
+    </div>
+  );
+}
+
+function PPTBlock({ payload }: { payload: PPTBlockPayload }) {
+  const embedUrl = getGoogleSlidesEmbedUrl(payload.url);
+  if (!embedUrl) {
+    return (
+      <p className="text-sm text-muted-foreground italic">
+        URL Presentasi tidak valid
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="aspect-video w-full overflow-hidden rounded-lg border shadow-sm">
+        <iframe
+          src={embedUrl}
+          className="h-full w-full"
+          allowFullScreen
+          loading="lazy"
+          title={payload.title || 'Presentation'}
+        />
+      </div>
+      {payload.title && (
+        <p className="text-center text-sm text-muted-foreground">{payload.title}</p>
+      )}
+    </div>
+  );
+}
+
+function PDFBlock({ payload }: { payload: PDFBlockPayload }) {
+  if (!payload.url) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-3">
+      {payload.title && (
+        <h4 className="font-medium">{payload.title}</h4>
+      )}
+      <div className="aspect-[3/4] max-h-[600px] w-full overflow-hidden rounded-lg border shadow-sm">
+        <iframe
+          src={`${payload.url}#toolbar=1&navpanes=0`}
+          className="h-full w-full"
+          title={payload.file_name || 'PDF Document'}
+        />
+      </div>
+      <a
+        href={payload.url}
+        download={payload.file_name}
+        className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+      >
+        <Download className="h-4 w-4" />
+        Download PDF {payload.file_name && `(${payload.file_name})`}
+      </a>
+    </div>
+  );
+}
+
+function DocBlock({ payload }: { payload: DocBlockPayload }) {
+  if (!payload.url) {
+    return null;
+  }
+
+  const viewerUrl = getGoogleDocsViewerUrl(payload.url);
+
+  return (
+    <div className="space-y-3">
+      {payload.title && (
+        <h4 className="font-medium">{payload.title}</h4>
+      )}
+      <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
+        <FileText className="h-8 w-8 text-blue-500" />
+        <div className="flex-1">
+          <p className="text-sm font-medium">{payload.file_name || 'Document'}</p>
+          <p className="text-xs text-muted-foreground">Word Document</p>
+        </div>
+        <a
+          href={payload.url}
+          download={payload.file_name}
+          className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+        >
+          <Download className="h-4 w-4" />
+          Download
+        </a>
+      </div>
+      <div className="aspect-[3/4] max-h-[600px] w-full overflow-hidden rounded-lg border shadow-sm">
+        <iframe
+          src={viewerUrl}
+          className="h-full w-full"
+          title={payload.file_name || 'Document'}
+        />
+      </div>
+    </div>
+  );
+}
+
+function WebsiteBlock({ payload }: { payload: WebsiteBlockPayload }) {
+  if (!payload.url) {
+    return null;
+  }
+
+  const allowed = isAllowedDomain(payload.url);
+
+  if (!allowed) {
+    return (
+      <div className="space-y-2">
+        {payload.title && (
+          <h4 className="font-medium">{payload.title}</h4>
+        )}
+        <a
+          href={payload.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 rounded-lg border bg-muted/30 p-4 text-primary hover:bg-muted/50"
+        >
+          <Globe className="h-5 w-5" />
+          <span className="truncate">{payload.url}</span>
+          <ExternalLink className="h-4 w-4 shrink-0" />
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {payload.title && (
+        <h4 className="font-medium">{payload.title}</h4>
+      )}
+      <div className="aspect-video w-full overflow-hidden rounded-lg border shadow-sm">
+        <iframe
+          src={payload.url}
+          className="h-full w-full"
+          sandbox="allow-scripts allow-same-origin allow-popups"
+          loading="lazy"
+          title={payload.title || 'Website'}
+        />
+      </div>
+    </div>
+  );
+}
+

@@ -47,6 +47,12 @@ import {
   Check,
   Camera,
   Table as TableIcon,
+  // New icons for embed blocks
+  Figma,
+  Globe,
+  Presentation,
+  FileUp,
+  Download,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -63,6 +69,21 @@ import { uploadsApi } from '@/lib/api/admin';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { Portfolio, Tag, Series, ContentBlockType, ContentBlockPayload } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import {
+  getFigmaEmbedUrl,
+  getCanvaEmbedUrl,
+  getGoogleSlidesEmbedUrl,
+  getGoogleDocsViewerUrl,
+  isValidFigmaUrl,
+  isValidCanvaUrl,
+  isValidGoogleSlidesUrl,
+  isAllowedDomain,
+  isValidUrl,
+  getAcceptedFileTypes,
+  isValidFileType,
+  formatFileSize,
+  MAX_DOCUMENT_SIZE,
+} from '@/lib/utils/embed-helpers';
 
 // Types
 interface LocalContentBlock {
@@ -82,6 +103,13 @@ const blockTypeOptions = [
   { value: 'youtube', label: 'Video', icon: Youtube, description: 'Embed YouTube', iconColor: 'text-red-500', bgColor: 'bg-red-100 dark:bg-red-500/20' },
   { value: 'table', label: 'Tabel', icon: TableIcon, description: 'Tabel data', iconColor: 'text-orange-500', bgColor: 'bg-orange-100 dark:bg-orange-500/20' },
   { value: 'button', label: 'Tombol', icon: Link2, description: 'Tombol dengan URL', iconColor: 'text-purple-500', bgColor: 'bg-purple-100 dark:bg-purple-500/20' },
+  // New block types
+  { value: 'figma', label: 'Figma', icon: Figma, description: 'Embed desain Figma', iconColor: 'text-purple-600', bgColor: 'bg-purple-100 dark:bg-purple-500/20' },
+  { value: 'canva', label: 'Canva', icon: ImageIcon, description: 'Embed desain Canva', iconColor: 'text-cyan-500', bgColor: 'bg-cyan-100 dark:bg-cyan-500/20' },
+  { value: 'ppt', label: 'Presentasi', icon: Presentation, description: 'Google Slides / PPT', iconColor: 'text-amber-500', bgColor: 'bg-amber-100 dark:bg-amber-500/20' },
+  { value: 'pdf', label: 'PDF', icon: FileText, description: 'Dokumen PDF', iconColor: 'text-red-600', bgColor: 'bg-red-100 dark:bg-red-500/20' },
+  { value: 'doc', label: 'Dokumen', icon: FileUp, description: 'Word / DOCX', iconColor: 'text-blue-600', bgColor: 'bg-blue-100 dark:bg-blue-500/20' },
+  { value: 'website', label: 'Website', icon: Globe, description: 'Embed halaman web', iconColor: 'text-emerald-500', bgColor: 'bg-emerald-100 dark:bg-emerald-500/20' },
 ];
 
 const generateId = () => `local-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
@@ -331,6 +359,13 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
       case 'image': return { url: '', caption: '' };
       case 'youtube': return { video_id: '', title: '' };
       case 'button': return { text: '', url: '' };
+      // New block types
+      case 'figma': return { url: '', title: '' };
+      case 'canva': return { url: '', title: '' };
+      case 'ppt': return { source: 'google_slides', url: '', title: '', file_name: '' };
+      case 'pdf': return { url: '', title: '', file_name: '' };
+      case 'doc': return { url: '', title: '', file_name: '' };
+      case 'website': return { url: '', title: '' };
       default: return {};
     }
   };
@@ -1380,6 +1415,315 @@ function ContentBlockEditor({
                       />
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* ===== FIGMA BLOCK ===== */}
+              {block.block_type === 'figma' && (
+                <div className="space-y-4">
+                  <Input
+                    value={(block.payload.url as string) || ''}
+                    onChange={(e) => onUpdate({ url: e.target.value.trim() })}
+                    placeholder="https://www.figma.com/file/..."
+                    className="text-sm"
+                  />
+                  {Boolean(block.payload.url) && isValidFigmaUrl(block.payload.url as string) && (
+                    <div className="aspect-video w-full overflow-hidden rounded-lg border shadow-sm">
+                      <iframe
+                        src={getFigmaEmbedUrl(block.payload.url as string) || ''}
+                        className="h-full w-full"
+                        allowFullScreen
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
+                  {Boolean(block.payload.url) && !isValidFigmaUrl(block.payload.url as string) && (
+                    <p className="text-sm text-amber-600">⚠️ URL Figma tidak valid</p>
+                  )}
+                  <Input
+                    value={(block.payload.title as string) || ''}
+                    onChange={(e) => onUpdate({ ...block.payload, title: e.target.value })}
+                    placeholder="Judul (opsional)"
+                    className="text-sm"
+                  />
+                </div>
+              )}
+
+              {/* ===== CANVA BLOCK ===== */}
+              {block.block_type === 'canva' && (
+                <div className="space-y-4">
+                  <Input
+                    value={(block.payload.url as string) || ''}
+                    onChange={(e) => onUpdate({ url: e.target.value.trim() })}
+                    placeholder="https://www.canva.com/design/..."
+                    className="text-sm"
+                  />
+                  {Boolean(block.payload.url) && isValidCanvaUrl(block.payload.url as string) && (
+                    <div className="aspect-video w-full overflow-hidden rounded-lg border shadow-sm">
+                      <iframe
+                        src={getCanvaEmbedUrl(block.payload.url as string) || ''}
+                        className="h-full w-full"
+                        allowFullScreen
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
+                  {Boolean(block.payload.url) && !isValidCanvaUrl(block.payload.url as string) && (
+                    <p className="text-sm text-amber-600">⚠️ URL Canva tidak valid</p>
+                  )}
+                  <Input
+                    value={(block.payload.title as string) || ''}
+                    onChange={(e) => onUpdate({ ...block.payload, title: e.target.value })}
+                    placeholder="Judul (opsional)"
+                    className="text-sm"
+                  />
+                </div>
+              )}
+
+              {/* ===== PPT BLOCK (Google Slides) ===== */}
+              {block.block_type === 'ppt' && (
+                <div className="space-y-4">
+                  <Input
+                    value={(block.payload.url as string) || ''}
+                    onChange={(e) => onUpdate({ ...block.payload, source: 'google_slides', url: e.target.value.trim() })}
+                    placeholder="https://docs.google.com/presentation/d/..."
+                    className="text-sm"
+                  />
+                  {Boolean(block.payload.url) && isValidGoogleSlidesUrl(block.payload.url as string) && (
+                    <div className="aspect-video w-full overflow-hidden rounded-lg border shadow-sm">
+                      <iframe
+                        src={getGoogleSlidesEmbedUrl(block.payload.url as string) || ''}
+                        className="h-full w-full"
+                        allowFullScreen
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
+                  {Boolean(block.payload.url) && !isValidGoogleSlidesUrl(block.payload.url as string) && (
+                    <p className="text-sm text-amber-600">⚠️ URL Google Slides tidak valid</p>
+                  )}
+                  <Input
+                    value={(block.payload.title as string) || ''}
+                    onChange={(e) => onUpdate({ ...block.payload, title: e.target.value })}
+                    placeholder="Judul presentasi (opsional)"
+                    className="text-sm"
+                  />
+                </div>
+              )}
+
+              {/* ===== PDF BLOCK ===== */}
+              {block.block_type === 'pdf' && (() => {
+                const pdfUrl = (block.payload.url as string) || '';
+                const fileName = (block.payload.file_name as string) || '';
+
+                const handlePdfUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (!isValidFileType(file, 'pdf')) {
+                    toast.error('File harus berformat PDF');
+                    return;
+                  }
+                  if (file.size > MAX_DOCUMENT_SIZE) {
+                    toast.error(`Ukuran file maksimal ${formatFileSize(MAX_DOCUMENT_SIZE)}`);
+                    return;
+                  }
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    onUpdateFile(file, reader.result as string);
+                    onUpdate({ file_name: file.name });
+                  };
+                  reader.readAsDataURL(file);
+                };
+
+                return (
+                  <div className="space-y-4">
+                    {pdfUrl || block.pendingPreview ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-3">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-red-500" />
+                            <span className="text-sm font-medium truncate max-w-[200px]">
+                              {fileName || 'document.pdf'}
+                            </span>
+                            {block.pendingFile && (
+                              <Badge variant="outline" className="text-xs">Akan diupload</Badge>
+                            )}
+                          </div>
+                          <label className="cursor-pointer">
+                            <Button variant="outline" size="sm" asChild>
+                              <span>Ganti File</span>
+                            </Button>
+                            <input
+                              type="file"
+                              accept={getAcceptedFileTypes('pdf')}
+                              className="hidden"
+                              onChange={handlePdfUpload}
+                            />
+                          </label>
+                        </div>
+                        {!block.pendingFile && pdfUrl && (
+                          <div className="aspect-[3/4] max-h-[500px] w-full overflow-hidden rounded-lg border">
+                            <iframe
+                              src={`${pdfUrl}#toolbar=1&navpanes=0`}
+                              className="h-full w-full"
+                              title={fileName}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <label className="flex aspect-video cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed bg-muted/30 transition-colors hover:bg-muted/50">
+                        <FileUp className="h-8 w-8 text-muted-foreground" />
+                        <span className="mt-2 text-sm font-medium">Upload PDF</span>
+                        <span className="text-xs text-muted-foreground">Max {formatFileSize(MAX_DOCUMENT_SIZE)}</span>
+                        <input
+                          type="file"
+                          accept={getAcceptedFileTypes('pdf')}
+                          className="hidden"
+                          onChange={handlePdfUpload}
+                        />
+                      </label>
+                    )}
+                    <Input
+                      value={(block.payload.title as string) || ''}
+                      onChange={(e) => onUpdate({ ...block.payload, title: e.target.value })}
+                      placeholder="Judul dokumen (opsional)"
+                      className="text-sm"
+                    />
+                  </div>
+                );
+              })()}
+
+              {/* ===== DOC BLOCK ===== */}
+              {block.block_type === 'doc' && (() => {
+                const docUrl = (block.payload.url as string) || '';
+                const fileName = (block.payload.file_name as string) || '';
+
+                const handleDocUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (!isValidFileType(file, 'doc')) {
+                    toast.error('File harus berformat DOC atau DOCX');
+                    return;
+                  }
+                  if (file.size > MAX_DOCUMENT_SIZE) {
+                    toast.error(`Ukuran file maksimal ${formatFileSize(MAX_DOCUMENT_SIZE)}`);
+                    return;
+                  }
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    onUpdateFile(file, reader.result as string);
+                    onUpdate({ file_name: file.name });
+                  };
+                  reader.readAsDataURL(file);
+                };
+
+                return (
+                  <div className="space-y-4">
+                    {docUrl || block.pendingPreview ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-3">
+                          <div className="flex items-center gap-2">
+                            <FileUp className="h-5 w-5 text-blue-500" />
+                            <span className="text-sm font-medium truncate max-w-[200px]">
+                              {fileName || 'document.docx'}
+                            </span>
+                            {block.pendingFile && (
+                              <Badge variant="outline" className="text-xs">Akan diupload</Badge>
+                            )}
+                          </div>
+                          <label className="cursor-pointer">
+                            <Button variant="outline" size="sm" asChild>
+                              <span>Ganti File</span>
+                            </Button>
+                            <input
+                              type="file"
+                              accept={getAcceptedFileTypes('doc')}
+                              className="hidden"
+                              onChange={handleDocUpload}
+                            />
+                          </label>
+                        </div>
+                        {!block.pendingFile && docUrl && (
+                          <div className="aspect-[3/4] max-h-[500px] w-full overflow-hidden rounded-lg border">
+                            <iframe
+                              src={getGoogleDocsViewerUrl(docUrl)}
+                              className="h-full w-full"
+                              title={fileName}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <label className="flex aspect-video cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed bg-muted/30 transition-colors hover:bg-muted/50">
+                        <FileUp className="h-8 w-8 text-muted-foreground" />
+                        <span className="mt-2 text-sm font-medium">Upload Word Document</span>
+                        <span className="text-xs text-muted-foreground">.doc, .docx • Max {formatFileSize(MAX_DOCUMENT_SIZE)}</span>
+                        <input
+                          type="file"
+                          accept={getAcceptedFileTypes('doc')}
+                          className="hidden"
+                          onChange={handleDocUpload}
+                        />
+                      </label>
+                    )}
+                    <Input
+                      value={(block.payload.title as string) || ''}
+                      onChange={(e) => onUpdate({ ...block.payload, title: e.target.value })}
+                      placeholder="Judul dokumen (opsional)"
+                      className="text-sm"
+                    />
+                  </div>
+                );
+              })()}
+
+              {/* ===== WEBSITE BLOCK ===== */}
+              {block.block_type === 'website' && (
+                <div className="space-y-4">
+                  <Input
+                    value={(block.payload.url as string) || ''}
+                    onChange={(e) => onUpdate({ url: e.target.value.trim() })}
+                    placeholder="https://example.com"
+                    className="text-sm"
+                  />
+                  {Boolean(block.payload.url) && isValidUrl(block.payload.url as string) && (
+                    <>
+                      {isAllowedDomain(block.payload.url as string) ? (
+                        <div className="aspect-video w-full overflow-hidden rounded-lg border shadow-sm">
+                          <iframe
+                            src={block.payload.url as string}
+                            className="h-full w-full"
+                            sandbox="allow-scripts allow-same-origin allow-popups"
+                            loading="lazy"
+                          />
+                        </div>
+                      ) : (
+                        <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-4">
+                          <p className="text-sm text-amber-700 dark:text-amber-300">
+                            ⚠️ Domain ini tidak ada di whitelist. Website akan ditampilkan sebagai link.
+                          </p>
+                          <a
+                            href={block.payload.url as string}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-2 inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                          >
+                            {String(block.payload.url)}
+                            <Globe className="h-3 w-3" />
+                          </a>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {Boolean(block.payload.url) && !isValidUrl(block.payload.url as string) && (
+                    <p className="text-sm text-amber-600">⚠️ URL tidak valid</p>
+                  )}
+                  <Input
+                    value={(block.payload.title as string) || ''}
+                    onChange={(e) => onUpdate({ ...block.payload, title: e.target.value })}
+                    placeholder="Judul website (opsional)"
+                    className="text-sm"
+                  />
                 </div>
               )}
             </div>
