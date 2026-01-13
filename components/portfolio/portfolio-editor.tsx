@@ -793,19 +793,18 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
               <p className="mt-1 text-sm text-muted-foreground">
                 Tambahkan teks, gambar, video, atau link untuk menceritakan karyamu
               </p>
-              <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                 {blockTypeOptions.map((opt) => (
                   <Button
                     key={opt.value}
                     variant="outline"
-                    size="sm"
+                    className="flex h-auto flex-col items-center justify-center gap-2 rounded-xl border-dashed p-4 hover:border-solid hover:bg-muted/50"
                     onClick={() => addBlock(opt.value as ContentBlockType)}
-                    className="h-10 gap-2 px-4"
                   >
-                    <div className={cn('rounded-md p-1.5', opt.bgColor)}>
-                      <opt.icon className={cn('h-3.5 w-3.5', opt.iconColor)} />
+                    <div className={cn('rounded-lg p-2.5', opt.bgColor)}>
+                      <opt.icon className={cn('h-6 w-6', opt.iconColor)} />
                     </div>
-                    {opt.label}
+                    <span className="text-xs font-medium">{opt.label}</span>
                   </Button>
                 ))}
               </div>
@@ -867,21 +866,23 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
                     Tambah Konten
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-64 p-2" align="center">
-                  <div className="grid gap-1">
+                <PopoverContent className="w-[90vw] max-w-md p-2 sm:w-[500px]" align="center">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                     {blockTypeOptions.map((opt) => (
                       <Button
                         key={opt.value}
                         variant="ghost"
-                        className="h-auto justify-start gap-3 px-3 py-2.5"
+                        className="flex h-auto flex-col items-center justify-center gap-2 rounded-xl p-3 hover:bg-muted/50"
                         onClick={() => addBlock(opt.value as ContentBlockType)}
                       >
                         <div className={cn('rounded-lg p-2', opt.bgColor)}>
-                          <opt.icon className={cn('h-4 w-4', opt.iconColor)} />
+                          <opt.icon className={cn('h-5 w-5', opt.iconColor)} />
                         </div>
-                        <div className="flex flex-col items-start">
-                          <span className="font-medium">{opt.label}</span>
-                          <span className="text-xs text-muted-foreground">{opt.description}</span>
+                        <div className="flex flex-col items-center gap-0.5 text-center">
+                          <span className="text-xs font-medium">{opt.label}</span>
+                          <span className="text-[10px] text-muted-foreground line-clamp-1">
+                            {opt.description}
+                          </span>
                         </div>
                       </Button>
                     ))}
