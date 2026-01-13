@@ -157,6 +157,15 @@ const ALLOWED_IFRAME_DOMAINS = [
 ];
 
 /**
+ * Validate if URL is a valid Twitter/X post URL
+ */
+export function isValidTwitterUrl(url: string): boolean {
+    if (!url) return false;
+    const twitterPattern = /^https?:\/\/(www\.)?(twitter\.com|x\.com)\/[a-zA-Z0-9_]+\/status\/[0-9]+/;
+    return twitterPattern.test(url);
+}
+
+/**
  * Check if a URL's domain is in the allowed whitelist
  */
 export function isAllowedDomain(url: string): boolean {

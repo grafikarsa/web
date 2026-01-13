@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import {
   ContentBlock,
   TextBlockPayload,
@@ -12,6 +13,7 @@ import {
   PDFBlockPayload,
   DocBlockPayload,
   WebsiteBlockPayload,
+  TwitterBlockPayload,
 } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { ExternalLink, Download, FileText, Globe } from 'lucide-react';
@@ -67,6 +69,8 @@ function RenderBlock({ block }: { block: ContentBlock }) {
       return <DocBlock payload={block.payload as DocBlockPayload} />;
     case 'website':
       return <WebsiteBlock payload={block.payload as WebsiteBlockPayload} />;
+    case 'twitter':
+      return <TwitterBlock payload={block.payload as TwitterBlockPayload} />;
     default:
       return null;
   }
@@ -378,6 +382,34 @@ function WebsiteBlock({ payload }: { payload: WebsiteBlockPayload }) {
           title={payload.title || 'Website'}
         />
       </div>
+    </div>
+  );
+}
+
+function TwitterBlock({ payload }: { payload: TwitterBlockPayload }) {
+  useEffect(() => {
+    // Inject Twitter widget script
+    const script = document.createElement('script');
+    script.src = "https://platform.twitter.com/widgets.js";
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      try {
+        document.body.removeChild(script);
+      } catch (e) {
+        // Ignore
+      }
+    }
+  }, []);
+
+  if (!payload.url) return null;
+
+  return (
+    <div className="flex justify-center py-4">
+      <blockquote className="twitter-tweet" data-dnt="true" data-theme="light">
+        <a href={payload.url}>loading tweet...</a>
+      </blockquote>
     </div>
   );
 }

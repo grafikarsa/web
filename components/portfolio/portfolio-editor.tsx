@@ -53,6 +53,7 @@ import {
   Presentation,
   FileUp,
   Download,
+  Twitter,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -83,6 +84,7 @@ import {
   isValidFileType,
   formatFileSize,
   MAX_DOCUMENT_SIZE,
+  isValidTwitterUrl,
 } from '@/lib/utils/embed-helpers';
 
 // Types
@@ -110,6 +112,7 @@ const blockTypeOptions = [
   { value: 'pdf', label: 'PDF', icon: FileText, description: 'Dokumen PDF', iconColor: 'text-red-600', bgColor: 'bg-red-100 dark:bg-red-500/20' },
   { value: 'doc', label: 'Dokumen', icon: FileUp, description: 'Word / DOCX', iconColor: 'text-blue-600', bgColor: 'bg-blue-100 dark:bg-blue-500/20' },
   { value: 'website', label: 'Website', icon: Globe, description: 'Embed halaman web', iconColor: 'text-emerald-500', bgColor: 'bg-emerald-100 dark:bg-emerald-500/20' },
+  { value: 'twitter', label: 'Twitter/X', icon: Twitter, description: 'Embed Tweet / Post', iconColor: 'text-sky-500', bgColor: 'bg-sky-100 dark:bg-sky-500/20' },
 ];
 
 const generateId = () => `local-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
@@ -366,6 +369,7 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
       case 'pdf': return { url: '', title: '', file_name: '' };
       case 'doc': return { url: '', title: '', file_name: '' };
       case 'website': return { url: '', title: '' };
+      case 'twitter': return { url: '' };
       default: return {};
     }
   };
@@ -1731,6 +1735,23 @@ function ContentBlockEditor({
                     placeholder="Judul website (opsional)"
                     className="text-sm"
                   />
+                </div>
+              )}
+
+              {block.block_type === 'twitter' && (
+                <div className="space-y-4">
+                  <div className="rounded-lg bg-sky-50 p-3 text-sm text-sky-800 dark:bg-sky-950/30 dark:text-sky-300">
+                    Masukkan URL Tweet/Post (X.com atau Twitter.com).
+                  </div>
+                  <Input
+                    value={(block.payload.url as string) || ''}
+                    onChange={(e) => onUpdate({ ...block.payload, url: e.target.value })}
+                    placeholder="https://x.com/username/status/..."
+                    className="font-mono text-sm"
+                  />
+                  {Boolean(block.payload.url) && !isValidTwitterUrl(block.payload.url as string) && (
+                    <p className="text-sm text-red-500">URL Twitter/X tidak valid</p>
+                  )}
                 </div>
               )}
             </div>
