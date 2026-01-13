@@ -30,10 +30,10 @@ export default function EditProfilePage() {
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.push('/login');
-    } else if (!authLoading && isAuthenticated && !isOwner) {
-      router.push(`/${username}`);
+    } else if (!authLoading && isAuthenticated && !isOwner && currentUser?.username) {
+      router.replace(`/${currentUser.username}/edit`);
     }
-  }, [authLoading, isAuthenticated, isOwner, username, router]);
+  }, [authLoading, isAuthenticated, isOwner, username, router, currentUser?.username]);
 
   if (authLoading || isLoading) {
     return (
