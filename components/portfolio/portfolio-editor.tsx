@@ -1019,8 +1019,16 @@ function ContentBlockEditor({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: isDragging ? 0.5 : 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
+      drag={!isLocked ? "x" : false}
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={{ left: 0.5, right: 0 }}
+      onDragEnd={(e, info) => {
+        if (!isLocked && info.offset.x < -100) {
+          onRemove();
+        }
+      }}
       className={cn(
-        'group rounded-xl border bg-card transition-shadow',
+        'group rounded-xl border bg-card transition-shadow touch-pan-y',
         isDragging && 'shadow-2xl ring-2 ring-primary'
       )}
     >
@@ -1044,7 +1052,7 @@ function ContentBlockEditor({
         <span className="text-sm font-medium">{blockTypeInfo?.label}</span>
         <span className="text-xs text-muted-foreground">#{index + 1}</span>
 
-        <div className="ml-auto flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="ml-auto flex items-center gap-1">
           {!isLocked && (
             <>
               <Tooltip>
