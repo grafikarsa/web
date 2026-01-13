@@ -55,6 +55,7 @@ import {
   Download,
   Twitter,
 } from 'lucide-react';
+import { TwitterEmbed } from '@/components/ui/twitter-embed';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -1752,6 +1753,12 @@ function ContentBlockEditor({
                   />
                   {Boolean(block.payload.url) && !isValidTwitterUrl(block.payload.url as string) && (
                     <p className="text-sm text-red-500">URL Twitter/X tidak valid</p>
+                  )}
+                  {Boolean(block.payload.url) && isValidTwitterUrl(block.payload.url as string) && (
+                    <div className="mt-2 rounded-lg border bg-background p-4">
+                      <p className="mb-2 text-xs font-medium text-muted-foreground">Preview:</p>
+                      <TwitterEmbed url={block.payload.url as string} />
+                    </div>
                   )}
                 </div>
               )}

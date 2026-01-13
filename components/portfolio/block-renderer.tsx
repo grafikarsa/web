@@ -386,30 +386,14 @@ function WebsiteBlock({ payload }: { payload: WebsiteBlockPayload }) {
   );
 }
 
+import { TwitterEmbed } from '@/components/ui/twitter-embed';
+
 function TwitterBlock({ payload }: { payload: TwitterBlockPayload }) {
-  useEffect(() => {
-    // Inject Twitter widget script
-    const script = document.createElement('script');
-    script.src = "https://platform.twitter.com/widgets.js";
-    script.async = true;
-    document.body.appendChild(script);
-
-    return () => {
-      try {
-        document.body.removeChild(script);
-      } catch (e) {
-        // Ignore
-      }
-    }
-  }, []);
-
   if (!payload.url) return null;
 
   return (
     <div className="flex justify-center py-4">
-      <blockquote className="twitter-tweet" data-dnt="true" data-theme="light">
-        <a href={payload.url}>loading tweet...</a>
-      </blockquote>
+      <TwitterEmbed url={payload.url} />
     </div>
   );
 }
