@@ -53,9 +53,7 @@ import {
   Presentation,
   FileUp,
   Download,
-  Twitter,
 } from 'lucide-react';
-import { TwitterEmbed } from '@/components/ui/twitter-embed';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -85,7 +83,6 @@ import {
   isValidFileType,
   formatFileSize,
   MAX_DOCUMENT_SIZE,
-  isValidTwitterUrl,
 } from '@/lib/utils/embed-helpers';
 
 // Types
@@ -112,8 +109,6 @@ const blockTypeOptions = [
   { value: 'ppt', label: 'Presentasi', icon: Presentation, description: 'Google Slides / PPT', iconColor: 'text-amber-500', bgColor: 'bg-amber-100 dark:bg-amber-500/20' },
   { value: 'pdf', label: 'PDF', icon: FileText, description: 'Dokumen PDF', iconColor: 'text-red-600', bgColor: 'bg-red-100 dark:bg-red-500/20' },
   { value: 'doc', label: 'Dokumen', icon: FileUp, description: 'Word / DOCX', iconColor: 'text-blue-600', bgColor: 'bg-blue-100 dark:bg-blue-500/20' },
-  { value: 'website', label: 'Website', icon: Globe, description: 'Embed halaman web', iconColor: 'text-emerald-500', bgColor: 'bg-emerald-100 dark:bg-emerald-500/20' },
-  { value: 'twitter', label: 'Twitter/X', icon: Twitter, description: 'Embed Tweet / Post', iconColor: 'text-sky-500', bgColor: 'bg-sky-100 dark:bg-sky-500/20' },
 ];
 
 const generateId = () => `local-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
@@ -369,8 +364,6 @@ export function PortfolioEditor({ portfolio, isEdit = false }: PortfolioEditorPr
       case 'ppt': return { source: 'google_slides', url: '', title: '', file_name: '' };
       case 'pdf': return { url: '', title: '', file_name: '' };
       case 'doc': return { url: '', title: '', file_name: '' };
-      case 'website': return { url: '', title: '' };
-      case 'twitter': return { url: '' };
       default: return {};
     }
   };
@@ -1690,78 +1683,7 @@ function ContentBlockEditor({
                 );
               })()}
 
-              {/* ===== WEBSITE BLOCK ===== */}
-              {block.block_type === 'website' && (
-                <div className="space-y-4">
-                  <Input
-                    value={(block.payload.url as string) || ''}
-                    onChange={(e) => onUpdate({ url: e.target.value.trim() })}
-                    placeholder="https://example.com"
-                    className="text-sm"
-                  />
-                  {Boolean(block.payload.url) && isValidUrl(block.payload.url as string) && (
-                    <>
-                      {isAllowedDomain(block.payload.url as string) ? (
-                        <div className="aspect-video w-full overflow-hidden rounded-lg border shadow-sm">
-                          <iframe
-                            src={block.payload.url as string}
-                            className="h-full w-full"
-                            sandbox="allow-scripts allow-same-origin allow-popups"
-                            loading="lazy"
-                          />
-                        </div>
-                      ) : (
-                        <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-4">
-                          <p className="text-sm text-amber-700 dark:text-amber-300">
-                            ⚠️ Domain ini tidak ada di whitelist. Website akan ditampilkan sebagai link.
-                          </p>
-                          <a
-                            href={block.payload.url as string}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="mt-2 inline-flex items-center gap-1 text-sm text-primary hover:underline"
-                          >
-                            {String(block.payload.url)}
-                            <Globe className="h-3 w-3" />
-                          </a>
-                        </div>
-                      )}
-                    </>
-                  )}
-                  {Boolean(block.payload.url) && !isValidUrl(block.payload.url as string) && (
-                    <p className="text-sm text-amber-600">⚠️ URL tidak valid</p>
-                  )}
-                  <Input
-                    value={(block.payload.title as string) || ''}
-                    onChange={(e) => onUpdate({ ...block.payload, title: e.target.value })}
-                    placeholder="Judul website (opsional)"
-                    className="text-sm"
-                  />
-                </div>
-              )}
 
-              {block.block_type === 'twitter' && (
-                <div className="space-y-4">
-                  <div className="rounded-lg bg-sky-50 p-3 text-sm text-sky-800 dark:bg-sky-950/30 dark:text-sky-300">
-                    Masukkan URL Tweet/Post (X.com atau Twitter.com).
-                  </div>
-                  <Input
-                    value={(block.payload.url as string) || ''}
-                    onChange={(e) => onUpdate({ ...block.payload, url: e.target.value })}
-                    placeholder="https://x.com/username/status/..."
-                    className="font-mono text-sm"
-                  />
-                  {Boolean(block.payload.url) && !isValidTwitterUrl(block.payload.url as string) && (
-                    <p className="text-sm text-red-500">URL Twitter/X tidak valid</p>
-                  )}
-                  {Boolean(block.payload.url) && isValidTwitterUrl(block.payload.url as string) && (
-                    <div className="mt-2 rounded-lg border bg-background p-4">
-                      <p className="mb-2 text-xs font-medium text-muted-foreground">Preview:</p>
-                      <TwitterEmbed url={block.payload.url as string} />
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </motion.div>
         )}

@@ -13,9 +13,7 @@ export type ContentBlockType =
   | 'canva'
   | 'ppt'
   | 'pdf'
-  | 'doc'
-  | 'website'
-  | 'twitter';
+  | 'doc';
 
 export interface Tag {
   id: string;
@@ -65,9 +63,7 @@ export type ContentBlockPayload =
   | CanvaBlockPayload
   | PPTBlockPayload
   | PDFBlockPayload
-  | DocBlockPayload
-  | WebsiteBlockPayload
-  | TwitterBlockPayload;
+  | DocBlockPayload;
 
 export interface TextBlockPayload {
   content: string;
@@ -128,14 +124,7 @@ export interface DocBlockPayload {
   file_name?: string;
 }
 
-export interface WebsiteBlockPayload {
-  url: string;
-  title?: string;
-}
 
-export interface TwitterBlockPayload {
-  url: string;
-}
 
 export interface PortfolioSeries {
   id: string;

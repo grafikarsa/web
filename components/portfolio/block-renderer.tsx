@@ -12,8 +12,6 @@ import {
   PPTBlockPayload,
   PDFBlockPayload,
   DocBlockPayload,
-  WebsiteBlockPayload,
-  TwitterBlockPayload,
 } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { ExternalLink, Download, FileText, Globe } from 'lucide-react';
@@ -67,10 +65,6 @@ function RenderBlock({ block }: { block: ContentBlock }) {
       return <PDFBlock payload={block.payload as PDFBlockPayload} />;
     case 'doc':
       return <DocBlock payload={block.payload as DocBlockPayload} />;
-    case 'website':
-      return <WebsiteBlock payload={block.payload as WebsiteBlockPayload} />;
-    case 'twitter':
-      return <TwitterBlock payload={block.payload as TwitterBlockPayload} />;
     default:
       return null;
   }
@@ -337,63 +331,6 @@ function DocBlock({ payload }: { payload: DocBlockPayload }) {
           title={payload.file_name || 'Document'}
         />
       </div>
-    </div>
-  );
-}
-
-function WebsiteBlock({ payload }: { payload: WebsiteBlockPayload }) {
-  if (!payload.url) {
-    return null;
-  }
-
-  const allowed = isAllowedDomain(payload.url);
-
-  if (!allowed) {
-    return (
-      <div className="space-y-2">
-        {payload.title && (
-          <h4 className="font-medium">{payload.title}</h4>
-        )}
-        <a
-          href={payload.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 rounded-lg border bg-muted/30 p-4 text-primary hover:bg-muted/50"
-        >
-          <Globe className="h-5 w-5" />
-          <span className="truncate">{payload.url}</span>
-          <ExternalLink className="h-4 w-4 shrink-0" />
-        </a>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-2">
-      {payload.title && (
-        <h4 className="font-medium">{payload.title}</h4>
-      )}
-      <div className="aspect-video w-full overflow-hidden rounded-lg border shadow-sm">
-        <iframe
-          src={payload.url}
-          className="h-full w-full"
-          sandbox="allow-scripts allow-same-origin allow-popups"
-          loading="lazy"
-          title={payload.title || 'Website'}
-        />
-      </div>
-    </div>
-  );
-}
-
-import { TwitterEmbed } from '@/components/ui/twitter-embed';
-
-function TwitterBlock({ payload }: { payload: TwitterBlockPayload }) {
-  if (!payload.url) return null;
-
-  return (
-    <div className="flex justify-center py-4">
-      <TwitterEmbed url={payload.url} />
     </div>
   );
 }
