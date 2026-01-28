@@ -19,7 +19,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { Home, Plus, Search, Users, FolderOpen, History, Shield } from 'lucide-react';
+import { Home, Plus, Search, Users, FolderOpen, History, Shield, MessageSquare } from 'lucide-react';
 import { getUnreadCount } from '@/lib/api/changelog';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 
@@ -75,6 +75,7 @@ export function StudentSidebar() {
 
   const navItems = [
     { href: '/', label: 'Feed', icon: Home, exact: true },
+    { href: '/messages', label: 'Pesan', icon: MessageSquare },
     { href: `/${user?.username}/portfolios/new`, label: 'Buat Portofolio', icon: Plus },
   ];
 

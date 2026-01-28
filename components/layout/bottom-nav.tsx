@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Search, PlusSquare, User, History, Users, Image as ImageIcon, X } from 'lucide-react';
+import { Home, Search, PlusSquare, User, History, Users, Image as ImageIcon, X, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useState } from 'react';
@@ -37,6 +37,17 @@ export function BottomNav() {
                     >
                         <Home className="h-5 w-5" />
                         <span className="text-[10px]">Home</span>
+                    </Link>
+
+                    <Link
+                        href="/messages"
+                        className={cn(
+                            "flex flex-col items-center gap-0.5 p-2 min-w-[56px]",
+                            isActive('/messages') ? "text-primary" : "text-muted-foreground"
+                        )}
+                    >
+                        <MessageSquare className="h-5 w-5" />
+                        <span className="text-[10px]">Pesan</span>
                     </Link>
 
                     <button

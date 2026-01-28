@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { QueryProvider } from '@/components/providers/query-provider';
 import { AuthProvider } from '@/components/providers/auth-provider';
+import { DMProvider } from '@/components/providers/dm-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { FeedbackButton } from '@/components/layout/feedback-button';
 
@@ -48,7 +49,9 @@ export default function RootLayout({
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
         <QueryProvider>
           <AuthProvider>
-            {children}
+            <DMProvider>
+              {children}
+            </DMProvider>
             <FeedbackButton />
             <Toaster position="top-center" richColors />
           </AuthProvider>
