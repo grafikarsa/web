@@ -8,6 +8,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -57,6 +58,9 @@ export function FollowModal({ username, type, open, onOpenChange }: FollowModalP
       <DialogContent className="max-h-[85vh] p-0 sm:max-w-md">
         <DialogHeader className="border-b px-4 py-3">
           <DialogTitle>{type === 'followers' ? 'Followers' : 'Following'}</DialogTitle>
+          <DialogDescription className="sr-only">
+            List of users who {type === 'followers' ? 'follow' : 'are followed by'} this user.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="px-4 py-3">
