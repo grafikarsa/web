@@ -3,7 +3,7 @@
 Platform Katalog Portofolio & Social Network untuk Warga SMKN 4 Malang.
 
 ## Tech Stack
-
+ 
 - **Framework:** Next.js 16 (App Router)
 - **Language:** TypeScript
 - **Styling:** Tailwind CSS 4
