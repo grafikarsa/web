@@ -62,6 +62,43 @@ const nextConfig: NextConfig = {
   // Production optimizations
   poweredByHeader: false,
   compress: true,
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'X-DNS-Prefetch-Control',
+            value: 'on',
+          },
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=63072000; includeSubDomains; preload',
+          },
+        ],
+      },
+      {
+        // Prevent aggressive caching of the HTML document
+        source: '/',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, must-revalidate',
+          },
+        ],
+      },
+      {
+        // Match all other pages
+        source: '/((?!api|_next/static|_next/image|favicon.ico).*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, must-revalidate',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
