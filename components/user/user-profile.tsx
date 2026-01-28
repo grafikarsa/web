@@ -109,7 +109,7 @@ export function UserProfile({ profile }: UserProfileProps) {
                   {followMutation.isPending && <Loader2 className="mr-2 h-3 w-3 animate-spin md:h-4 md:w-4" />}
                   {profile.is_following ? 'Unfollow' : 'Follow'}
                 </Button>
-                <Button
+                {/* <Button
                   variant="secondary"
                   size="sm"
                   className="h-8 text-xs md:h-9 md:px-4 md:text-sm active:scale-95 transition-transform"
@@ -126,7 +126,7 @@ export function UserProfile({ profile }: UserProfileProps) {
                   }}
                 >
                   Kirim Pesan
-                </Button>
+                </Button> */}
               </div>
             ) : null}
           </div>
