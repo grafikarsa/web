@@ -40,6 +40,7 @@ interface DMContextType {
     onlineUsers: Set<string>;
     totalUnreadCount: number;
     refreshConversations: () => Promise<void>;
+    startConversation: (userId: string) => Promise<string>;
 }
 
 const DMContext = createContext<DMContextType | null>(null);
@@ -284,7 +285,16 @@ export function DMProvider({ children }: { children: ReactNode }) {
             sendTyping,
             onlineUsers,
             totalUnreadCount,
-            refreshConversations
+            refreshConversations,
+            startConversation: async (userId: string) => {
+                const res = await dmApi.startConversation(userId, '');
+                if (res.success) {
+                    await refreshConversations(); // Reload list
+                    setActiveConversationId(res.data.id);
+                    return res.data.id;
+                }
+                throw new Error('Failed to start conversation');
+            }
         }}>
             {children}
         </DMContext.Provider>

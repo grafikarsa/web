@@ -8,11 +8,20 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { id } from 'date-fns/locale';
-import { Send, Image as ImageIcon, MoreVertical, Phone, Video } from 'lucide-react';
+import { Send, Image as ImageIcon, Info, MessageCircle, Phone, Video } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 
-export function ChatWindow() {
+interface ChatWindowProps {
+    onOpenInfo?: () => void;
+}
+
+export function ChatWindow({ onOpenInfo }: ChatWindowProps) {
     const {
         activeConversation,
         messages,
@@ -36,7 +45,7 @@ export function ChatWindow() {
         if (scrollRef.current) {
             scrollRef.current.scrollIntoView({ behavior: 'smooth' });
         }
-    }, [messages, isPartnerTyping]);
+    }, [messages, isPartnerTyping, activeConversation?.id]); // Added activeConversation.id dependency
 
     const handleSend = async (e?: React.FormEvent) => {
         e?.preventDefault();
@@ -57,8 +66,14 @@ export function ChatWindow() {
 
     if (!activeConversation) {
         return (
-            <div className="flex h-full items-center justify-center text-muted-foreground">
-                Pilih percakapan untuk memulai chat
+            <div className="flex h-full flex-col items-center justify-center text-center p-8 text-muted-foreground gap-4">
+                <div className="h-24 w-24 rounded-full bg-muted flex items-center justify-center">
+                    <MessageCircle className="h-12 w-12 text-muted-foreground/50" />
+                </div>
+                <div>
+                    <h3 className="text-xl font-semibold mb-1">Your Messages</h3>
+                    <p className="text-sm">Send private photos and messages to a friend or group.</p>
+                </div>
             </div>
         );
     }
@@ -66,97 +81,127 @@ export function ChatWindow() {
     return (
         <div className="flex h-full flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between border-b p-4">
-                <div className="flex items-center gap-3">
-                    <Avatar>
+            <div className="flex items-center justify-between px-6 py-4 border-b h-[72px] bg-background/50 backdrop-blur-sm z-10">
+                <div className="flex items-center gap-4">
+                    <Avatar className="h-10 w-10 cursor-pointer">
                         <AvatarImage src={otherUser?.avatar_url} />
                         <AvatarFallback>{otherUser?.nama[0]}</AvatarFallback>
                     </Avatar>
                     <div>
-                        <h3 className="font-semibold">{otherUser?.nama}</h3>
+                        <h3 className="font-semibold text-sm leading-none mb-1">{otherUser?.nama}</h3>
                         <p className="text-xs text-muted-foreground">
-                            {isOnline ? 'Online' : 'Offline'}
+                            {isOnline ? 'Active now' : 'Offline'}
                         </p>
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    {/* Add buttons/menu here */}
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+                                    <Phone className="h-6 w-6" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Coming Soon</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+                                    <Video className="h-6 w-6" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Coming Soon</TooltipContent>
+                        </Tooltip>
+                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={onOpenInfo}>
+                            <Info className="h-6 w-6" />
+                        </Button>
+                    </TooltipProvider>
                 </div>
             </div>
 
             {/* Messages */}
-            <ScrollArea className="flex-1 p-4">
-                <div className="flex flex-col gap-4">
+            <ScrollArea className="flex-1 px-4 py-2">
+                <div className="flex flex-col gap-1.5 py-4">
+                    {/* Timestamp for conversation start could go here */}
+
                     {messages.map((msg, idx) => {
                         const isMe = msg.sender_id === user?.id;
-                        const showAvatar = !isMe && (idx === 0 || messages[idx - 1].sender_id !== msg.sender_id);
+                        const isLastInGroup = idx === messages.length - 1 || messages[idx + 1].sender_id !== msg.sender_id;
+                        const isFirstInGroup = idx === 0 || messages[idx - 1].sender_id !== msg.sender_id;
+
+                        // Bubble Shapes logic
+                        const myRadius = isLastInGroup
+                            ? isFirstInGroup ? "rounded-[22px]" : "rounded-[22px] rounded-br-sm"
+                            : isFirstInGroup ? "rounded-[22px] rounded-tr-sm" : "rounded-[22px] rounded-r-sm";
+
+                        const otherRadius = isLastInGroup
+                            ? isFirstInGroup ? "rounded-[22px]" : "rounded-[22px] rounded-bl-sm"
+                            : isFirstInGroup ? "rounded-[22px] rounded-tl-sm" : "rounded-[22px] rounded-l-sm";
 
                         return (
                             <div
                                 key={msg.id}
                                 className={cn(
-                                    "flex gap-2 max-w-[70%]",
-                                    isMe ? "ml-auto flex-row-reverse" : ""
+                                    "flex gap-2 max-w-[65%]",
+                                    isMe ? "ml-auto flex-row-reverse" : "items-end"
                                 )}
                             >
-                                {!isMe && (
-                                    <div className="w-8">
-                                        {showAvatar && (
-                                            <Avatar className="h-8 w-8">
-                                                <AvatarImage src={otherUser?.avatar_url} />
-                                                <AvatarFallback>{otherUser?.nama[0]}</AvatarFallback>
-                                            </Avatar>
-                                        )}
-                                    </div>
-                                )}
-
                                 <div className={cn(
-                                    "rounded-lg p-3",
-                                    isMe ? "bg-primary text-primary-foreground" : "bg-muted"
+                                    "px-4 py-2.5 break-words text-[15px] leading-snug",
+                                    isMe
+                                        ? `bg-[#0095F6] text-white ${myRadius}`
+                                        : `bg-muted dark:bg-[#262626] text-foreground ${otherRadius}`
                                 )}>
                                     {msg.message_type === 'image' ? (
                                         // eslint-disable-next-line @next/next/no-img-element
-                                        <img src={msg.content} alt="Image" className="rounded-md max-w-full" />
+                                        <img src={msg.content} alt="Image" className="rounded-lg max-w-full" />
                                     ) : (
-                                        <p className="text-sm">{msg.content}</p>
+                                        <p>{msg.content}</p>
                                     )}
-                                    <span className="mt-1 block text-[10px] opacity-70">
+                                </div>
+                                {isLastInGroup && !isMe && (
+                                    <span className="text-[10px] text-muted-foreground self-center opacity-0 group-hover:opacity-100 transition-opacity">
                                         {format(new Date(msg.created_at), 'HH:mm')}
                                     </span>
-                                </div>
+                                )}
                             </div>
                         );
                     })}
 
                     {isPartnerTyping && (
-                        <div className="flex gap-2 text-sm text-muted-foreground items-center">
+                        <div className="flex gap-2 text-sm text-muted-foreground items-center ml-2 mt-2">
                             <Avatar className="h-6 w-6">
                                 <AvatarImage src={otherUser?.avatar_url} />
                             </Avatar>
-                            Writing...
+                            <span className="bg-muted px-3 py-1.5 rounded-full text-xs animate-pulse">
+                                ...
+                            </span>
                         </div>
                     )}
-                    <div ref={scrollRef} />
+                    <div ref={scrollRef} className="h-px" />
                 </div>
             </ScrollArea>
 
-            {/* Input */}
-            <div className="border-t p-4">
-                <form onSubmit={handleSend} className="flex gap-2">
-                    <Button type="button" variant="ghost" size="icon">
+            {/* Input Area */}
+            <div className="p-4 m-4 mt-0 bg-background">
+                <form onSubmit={handleSend} className="flex items-center gap-2 p-1.5 rounded-[22px] border bg-background focus-within:ring-1 focus-within:ring-muted-foreground/20 transition-all">
+                    <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground">
                         <ImageIcon className="h-5 w-5" />
                     </Button>
                     <Input
                         value={inputValue}
                         onChange={handleInputChange}
-                        placeholder="Ketik pesan..."
-                        className="flex-1"
+                        placeholder="Message..."
+                        className="flex-1 border-none shadow-none focus-visible:ring-0 px-2 py-6 h-auto max-h-32 text-base"
                     />
-                    <Button type="submit" size="icon">
-                        <Send className="h-5 w-5" />
-                    </Button>
+                    {inputValue.trim() && (
+                        <Button type="submit" variant="ghost" size="sm" className="font-semibold text-primary hover:text-primary/80 hover:bg-transparent px-3 mr-1">
+                            Send
+                        </Button>
+                    )}
                 </form>
             </div>
         </div>
     );
 }
+

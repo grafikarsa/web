@@ -19,6 +19,12 @@ export const usersApi = {
     return response.data;
   },
 
+  search: async (query: string): Promise<ApiResponse<UserCard[]>> => {
+    const response = await api.get<ApiResponse<UserCard[]>>('/users', { params: { search: query } });
+    return response.data;
+  },
+
+
   getUserByUsername: async (username: string): Promise<ApiResponse<User>> => {
     const response = await api.get<ApiResponse<User>>(`/users/${username}`);
     return response.data;
