@@ -59,6 +59,9 @@ export function DMSettingsModal({ open, onOpenChange }: DMSettingsModalProps) {
             <DialogContent className="sm:max-w-[500px] h-[500px] flex flex-col p-0 gap-0 overflow-hidden">
                 <DialogHeader className="p-4 border-b">
                     <DialogTitle className="text-center font-bold">DM Settings</DialogTitle>
+                    <DialogDescription className="sr-only">
+                        Manage your direct message privacy and blocked users.
+                    </DialogDescription>
                 </DialogHeader>
 
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">

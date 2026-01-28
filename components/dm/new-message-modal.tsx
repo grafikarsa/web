@@ -13,6 +13,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, Loader2 } from 'lucide-react';
 import { useDebounce } from '@/lib/hooks/use-debounce';
 
+import { toast } from 'sonner';
+
 interface NewMessageModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -32,12 +34,12 @@ export function NewMessageModal({ open, onOpenChange }: NewMessageModalProps) {
 
     const handleUserSelect = async (userId: string) => {
         try {
-            const conversationId = await startConversation(userId);
+            await startConversation(userId);
             onOpenChange(false);
-            // If we are already on the messages page, the provider will update the active conversation
-            // If not, we might want to redirect, but for now we assume this modal is used in context
+            toast.success('Percakapan dimulai');
         } catch (error) {
             console.error('Failed to start conversation:', error);
+            toast.error('Gagal memulai percakapan');
         }
     };
 
@@ -46,6 +48,9 @@ export function NewMessageModal({ open, onOpenChange }: NewMessageModalProps) {
             <DialogContent className="sm:max-w-[400px] p-0 gap-0 overflow-hidden">
                 <DialogHeader className="p-4 border-b">
                     <DialogTitle className="text-center font-bold">New Message</DialogTitle>
+                    <DialogDescription className="sr-only">
+                        Search for people to start a new private message.
+                    </DialogDescription>
                 </DialogHeader>
 
                 <div className="p-2 border-b">
@@ -76,21 +81,21 @@ export function NewMessageModal({ open, onOpenChange }: NewMessageModalProps) {
                                 <button
                                     key={user.id}
                                     onClick={() => handleUserSelect(user.id)}
-                                    className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors text-left"
+                                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted/80 transition-all text-left cursor-pointer active:scale-[0.98]"
                                 >
-                                    <Avatar className="h-10 w-10">
+                                    <Avatar className="h-11 w-11 border">
                                         <AvatarImage src={user.avatar_url} />
                                         <AvatarFallback>{user.nama[0]}</AvatarFallback>
                                     </Avatar>
                                     <div className="flex-1 overflow-hidden">
-                                        <p className="font-semibold truncate">{user.nama}</p>
+                                        <p className="font-semibold text-sm truncate">{user.nama}</p>
                                         <p className="text-xs text-muted-foreground truncate">@{user.username}</p>
                                     </div>
                                 </button>
                             ))}
                             {!debouncedSearch && (
-                                <div className="p-4 text-center text-sm text-muted-foreground">
-                                    Type a name or username to search.
+                                <div className="p-12 text-center">
+                                    <p className="text-sm text-muted-foreground">Cari pengguna untuk memulai pesan baru.</p>
                                 </div>
                             )}
                         </div>

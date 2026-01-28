@@ -112,12 +112,13 @@ export function UserProfile({ profile }: UserProfileProps) {
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="h-8 text-xs md:h-9 md:px-4 md:text-sm"
+                  className="h-8 text-xs md:h-9 md:px-4 md:text-sm active:scale-95 transition-transform"
                   onClick={async () => {
                     // Start conversation and redirect
                     try {
                       const { dmApi } = await import('@/lib/api/dm');
-                      await dmApi.startConversation(profile.id, '');
+                      // backend version expects message content, making it optional in next step
+                      await dmApi.startConversation(profile.id, 'Halo!');
                       window.location.href = '/messages';
                     } catch (e) {
                       toast.error('Gagal memulai percakapan');
