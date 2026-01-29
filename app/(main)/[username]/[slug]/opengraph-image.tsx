@@ -11,6 +11,13 @@ export const size = {
 
 export const contentType = 'image/png';
 
+function getAbsoluteUrl(url: string | null | undefined): string | undefined {
+    if (!url) return undefined;
+    if (url.startsWith('http')) return url;
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:8080';
+    return `${baseUrl.replace(/\/$/, '')}/${url.replace(/^\//, '')}`;
+}
+
 export default async function Image({ params }: { params: { username: string; slug: string } }) {
     const { username, slug } = await params;
     const portfolio = await getPortfolioDetail(username, slug);
@@ -59,7 +66,7 @@ export default async function Image({ params }: { params: { username: string; sl
                 {hasThumbnail && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                        src={portfolio.thumbnail_url}
+                        src={getAbsoluteUrl(portfolio.thumbnail_url)}
                         alt=""
                         style={{
                             position: 'absolute',
@@ -67,9 +74,7 @@ export default async function Image({ params }: { params: { username: string; sl
                             left: 0,
                             width: '100%',
                             height: '100%',
-                            objectFit: 'cover',
                             opacity: 0.4,
-                            filter: 'grayscale(1) contrast(1.2)',
                         }}
                     />
                 )}
@@ -126,11 +131,11 @@ export default async function Image({ params }: { params: { username: string; sl
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '2px solid #fff', paddingTop: '32px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                             {/* Author Circle */}
-                            <div style={{ width: '60px', height: '60px', border: '2px solid #fff' }}>
+                            <div style={{ width: '60px', height: '60px', border: '2px solid #fff', overflow: 'hidden', background: '#333' }}>
                                 <img
-                                    src={portfolio.user?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`}
+                                    src={getAbsoluteUrl(portfolio.user?.avatar_url) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`}
                                     alt=""
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'grayscale(1)' }}
+                                    style={{ width: '100%', height: '100%' }}
                                 />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>

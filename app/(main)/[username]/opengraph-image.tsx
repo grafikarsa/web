@@ -11,6 +11,13 @@ export const size = {
 
 export const contentType = 'image/png';
 
+function getAbsoluteUrl(url: string | null | undefined): string | undefined {
+    if (!url) return undefined;
+    if (url.startsWith('http')) return url;
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:8080';
+    return `${baseUrl.replace(/\/$/, '')}/${url.replace(/^\//, '')}`;
+}
+
 export default async function Image({ params }: { params: { username: string } }) {
     const { username } = await params;
     const user = await getUserProfile(username);
@@ -115,14 +122,12 @@ export default async function Image({ params }: { params: { username: string } }
                     }} />
 
                     <img
-                        src={user.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`}
+                        src={getAbsoluteUrl(user.avatar_url) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`}
                         alt=""
                         style={{
                             width: '320px',
                             height: '320px',
-                            objectFit: 'cover',
                             border: '2px solid #ffffff',
-                            filter: 'grayscale(1)',
                         }}
                     />
 
