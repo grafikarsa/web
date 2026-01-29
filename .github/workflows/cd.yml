@@ -72,11 +72,11 @@ jobs:
             # Export environment variables for docker-compose
             export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
             
-            # Pull latest image explicitly via docker-compose to handle variables
-            docker-compose -f docker-compose.prod.yml pull web
+            # Pull latest image explicitly via docker compose to handle variables
+            docker compose -f docker-compose.prod.yml pull web
             
             # Recreate container with latest image and config
-            docker-compose -f docker-compose.prod.yml up -d --force-recreate web
+            docker compose -f docker-compose.prod.yml up -d --force-recreate web
             
             # Cleanup old images
             docker image prune -f
