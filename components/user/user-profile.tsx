@@ -21,7 +21,16 @@ import {
   Facebook,
   Loader2,
   Edit,
+  Share2,
+  Link2,
+  MessageCircle,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { FollowModal } from './follow-modal';
 
 const socialIcons: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -59,6 +68,18 @@ export function UserProfile({ profile }: UserProfileProps) {
     },
   });
 
+  const profileUrl = typeof window !== 'undefined' ? `${window.location.origin}/${profile.username}` : '';
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(profileUrl);
+    toast.success('Link profil berhasil disalin!');
+  };
+
+  const handleShareWhatsApp = () => {
+    const text = `Halo! Cek portofolio ${profile.nama} di Grafikarsa: ${profileUrl}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
   return (
     <>
       {/* Banner - Full width, edge-to-edge */}
@@ -89,7 +110,26 @@ export function UserProfile({ profile }: UserProfileProps) {
           </Avatar>
 
           {/* Actions */}
-          <div className="flex gap-2 pb-0 md:pb-2">
+          <div className="flex items-center gap-2 pb-0 md:pb-2">
+            {/* Share Button - Global */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 w-8 p-0 md:h-9 md:w-9">
+                  <Share2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={handleCopyLink} className="cursor-pointer">
+                  <Link2 className="mr-2 h-4 w-4" />
+                  Salin Link
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleShareWhatsApp} className="cursor-pointer">
+                  <MessageCircle className="mr-2 h-4 w-4" />
+                  WhatsApp
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             {isOwner ? (
               <Link href={`/${profile.username}/edit`}>
                 <Button variant="outline" size="sm" className="h-8 text-xs md:h-9 md:px-4 md:text-sm">
