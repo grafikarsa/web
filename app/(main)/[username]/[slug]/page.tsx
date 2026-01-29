@@ -18,10 +18,10 @@ export async function generateMetadata({ params }: PortfolioDetailPageProps): Pr
   }
 
   const title = `${portfolio.judul} | Grafikarsa`;
-  
+
   // Try to find first text block for description
   const firstTextBlock = portfolio.content_blocks?.find((b: any) => b.block_type === 'text');
-  const description = firstTextBlock?.payload?.content?.substring(0, 160) || 
+  const description = firstTextBlock?.payload?.content?.substring(0, 160) ||
     `Karya portofolio oleh ${portfolio.user?.nama} di Grafikarsa - Platform Portofolio SMKN 4 Malang.`;
 
   return {
@@ -53,9 +53,5 @@ export default async function PortfolioDetailPage({ params }: PortfolioDetailPag
   const { username, slug } = await params;
   const portfolio = await getPortfolioDetail(username, slug);
 
-  if (!portfolio) {
-    notFound();
-  }
-
-  return <PortfolioClient username={username} slug={slug} initialData={portfolio} />;
+  return <PortfolioClient username={username} slug={slug} initialData={portfolio as any} />;
 }

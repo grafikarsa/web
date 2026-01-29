@@ -4,7 +4,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/a
 
 export async function getUserProfile(username: string): Promise<User | null> {
     try {
-        const res = await fetch(`${API_BASE_URL}/users/${username}`, {
+        const res = await fetch(`${API_BASE_URL}/users/${encodeURIComponent(username)}`, {
             next: { revalidate: 60 }, // Cache for 1 minute
         });
 
@@ -20,7 +20,7 @@ export async function getUserProfile(username: string): Promise<User | null> {
 
 export async function getPortfolioDetail(username: string, slug: string): Promise<any | null> {
     try {
-        const res = await fetch(`${API_BASE_URL}/portfolios/${username}/${slug}`, {
+        const res = await fetch(`${API_BASE_URL}/portfolios/${encodeURIComponent(slug)}?username=${encodeURIComponent(username)}`, {
             next: { revalidate: 60 },
         });
 

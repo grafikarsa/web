@@ -49,9 +49,5 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const { username } = await params;
   const user = await getUserProfile(username);
 
-  if (!user) {
-    notFound();
-  }
-
-  return <ProfileClient username={username} initialData={user} />;
+  return <ProfileClient username={username} initialData={user as any} />;
 }

@@ -7,10 +7,11 @@ import { UserProfile } from '@/components/user/user-profile';
 import { PortfolioCard } from '@/components/portfolio/portfolio-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { User } from '@/lib/types';
+import { notFound } from 'next/navigation';
 
 interface ProfileClientProps {
     username: string;
-    initialData: User;
+    initialData: User | null;
 }
 
 function ProfileSkeleton() {
@@ -35,7 +36,7 @@ export function ProfileClient({ username, initialData }: ProfileClientProps) {
     const { data: userData, isLoading: userLoading } = useQuery({
         queryKey: ['user', username],
         queryFn: () => usersApi.getUserByUsername(username),
-        initialData: { data: initialData, message: '', success: true },
+        initialData: initialData ? { data: initialData, message: '', success: true } : undefined,
     });
 
     const { data: portfoliosData, isLoading: portfoliosLoading } = useQuery({
@@ -47,11 +48,17 @@ export function ProfileClient({ username, initialData }: ProfileClientProps) {
         enabled: !!userData?.data,
     });
 
-    if (userLoading) {
+    if (userLoading && !(userData as any)?.data) {
         return <ProfileSkeleton />;
     }
 
     const profile = userData?.data || initialData;
+
+    if (!profile) {
+        notFound();
+        return null;
+    }
+
     const portfolios = portfoliosData?.data || [];
 
     return (

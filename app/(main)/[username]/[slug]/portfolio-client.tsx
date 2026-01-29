@@ -28,7 +28,7 @@ import { Portfolio } from '@/lib/types';
 interface PortfolioClientProps {
     username: string;
     slug: string;
-    initialData: Portfolio;
+    initialData: Portfolio | null;
 }
 
 function PortfolioSkeleton() {
@@ -62,11 +62,20 @@ export function PortfolioClient({ username, slug, initialData }: PortfolioClient
     const { data, isLoading } = useQuery({
         queryKey: ['portfolio', username, slug],
         queryFn: () => portfoliosApi.getPortfolioBySlug(slug, username),
-        initialData: { data: initialData, message: '', success: true },
+        initialData: initialData ? { data: initialData, message: '', success: true } : undefined,
     });
 
-    const portfolio = data?.data || initialData;
-    const readingTime = calculateReadingTime(portfolio.content_blocks);
+    const portfolio = (data as any)?.data || initialData;
+
+    if (isLoading && !portfolio) {
+        return <PortfolioSkeleton />;
+    }
+
+    if (!portfolio) {
+        notFound();
+    }
+
+    const readingTime = calculateReadingTime(portfolio.content_blocks || []);
 
     return (
         <article className="pb-24 md:pb-16">
@@ -171,7 +180,7 @@ export function PortfolioClient({ username, slug, initialData }: PortfolioClient
                     {/* Tags */}
                     {portfolio.tags && portfolio.tags.length > 0 && (
                         <div className="flex flex-wrap gap-2">
-                            {portfolio.tags.map((tag) => (
+                            {portfolio.tags.map((tag: any) => (
                                 <Badge key={tag.id} variant="secondary" className="font-normal">
                                     {tag.nama}
                                 </Badge>
