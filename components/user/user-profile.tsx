@@ -24,6 +24,7 @@ import {
   Share2,
   Link2,
   MessageCircle,
+  Mail,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -80,6 +81,15 @@ export function UserProfile({ profile }: UserProfileProps) {
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
+  const handleCopyEmail = () => {
+    if (profile.email) {
+      navigator.clipboard.writeText(profile.email);
+      toast.success('Email berhasil disalin!');
+    } else {
+      toast.error('User ini tidak mencantumkan email publik');
+    }
+  };
+
   return (
     <>
       {/* Banner - Full width, edge-to-edge */}
@@ -122,6 +132,10 @@ export function UserProfile({ profile }: UserProfileProps) {
                 <DropdownMenuItem onClick={handleCopyLink} className="cursor-pointer">
                   <Link2 className="mr-2 h-4 w-4" />
                   Salin Link
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleCopyEmail} className="cursor-pointer">
+                  <Mail className="mr-2 h-4 w-4" />
+                  Salin Email
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleShareWhatsApp} className="cursor-pointer">
                   <MessageCircle className="mr-2 h-4 w-4" />

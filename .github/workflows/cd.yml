@@ -69,11 +69,14 @@ jobs:
           script: |
             cd /opt/grafikarsa/web
             
-            # Pull latest image
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+            # Export environment variables for docker-compose
+            export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
             
-            # Recreate container with latest image and config (now updated via SCP)
-            docker-compose -f docker-compose.prod.yml up -d --force-recreate
+            # Pull latest image explicitly via docker-compose to handle variables
+            docker-compose -f docker-compose.prod.yml pull web
+            
+            # Recreate container with latest image and config
+            docker-compose -f docker-compose.prod.yml up -d --force-recreate web
             
             # Cleanup old images
             docker image prune -f

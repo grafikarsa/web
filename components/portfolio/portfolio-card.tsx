@@ -14,6 +14,7 @@ import {
   Eye,
   Loader2,
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -64,6 +65,12 @@ export function PortfolioCard({ portfolio, showStatus = false, showActions = fal
       queryClient.invalidateQueries({ queryKey: ['user-portfolios'] });
       queryClient.invalidateQueries({ queryKey: ['my-portfolios'] });
       toast.success('Portfolio dikirim untuk review');
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#22c55e', '#10b981', '#ffffff'] // Primary green colors
+      });
     },
     onError: () => toast.error('Gagal mengirim portfolio'),
   });
