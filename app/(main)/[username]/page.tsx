@@ -1,99 +1,57 @@
-'use client';
-
-import { useQuery } from '@tanstack/react-query';
-import { usersApi, portfoliosApi } from '@/lib/api';
-import { useAuthStore } from '@/lib/stores/auth-store';
-import { UserProfile } from '@/components/user/user-profile';
-import { PortfolioCard } from '@/components/portfolio/portfolio-card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { use } from 'react';
+import { getUserProfile } from '@/lib/api/server-fetch';
+import { ProfileClient } from './profile-client';
 
 interface ProfilePageProps {
   params: Promise<{ username: string }>;
 }
 
-function ProfileSkeleton() {
-  return (
-    <div className="space-y-6">
-      <Skeleton className="h-48 w-full rounded-lg md:h-64" />
-      <div className="px-4">
-        <Skeleton className="h-32 w-32 rounded-full" />
-        <div className="mt-8 space-y-2">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-4 w-32" />
-        </div>
-      </div>
-    </div>
-  );
-}
+export async function generateMetadata({ params }: ProfilePageProps): Promise<Metadata> {
+  const { username } = await params;
+  const user = await getUserProfile(username);
 
-export default function ProfilePage({ params }: ProfilePageProps) {
-  const { username } = use(params);
-  const { user: currentUser } = useAuthStore();
-  const isOwner = currentUser?.username === username;
-
-  const { data: userData, isLoading: userLoading, error: userError } = useQuery({
-    queryKey: ['user', username],
-    queryFn: () => usersApi.getUserByUsername(username),
-  });
-
-  const { data: portfoliosData, isLoading: portfoliosLoading } = useQuery({
-    queryKey: ['user-portfolios', username, isOwner],
-    queryFn: () =>
-      isOwner
-        ? portfoliosApi.getMyPortfolios({ limit: 50 })
-        : portfoliosApi.getPortfolios({ user_id: userData?.data?.id, limit: 50 }),
-    enabled: !!userData?.data,
-  });
-
-  if (userLoading) {
-    return <ProfileSkeleton />;
+  if (!user) {
+    return {
+      title: 'User Not Found',
+    };
   }
 
-  if (userError || !userData?.data) {
+  const title = `${user.nama} (@${user.username}) | Grafikarsa`;
+  const description = user.bio || `Cek portofolio dan karya ${user.nama} di Grafikarsa - Platform Portofolio SMKN 4 Malang.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: 'profile',
+      username: user.username,
+      images: [
+        {
+          url: `/${user.username}/opengraph-image`,
+          width: 1200,
+          height: 630,
+          alt: user.nama,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+    },
+  };
+}
+
+export default async function ProfilePage({ params }: ProfilePageProps) {
+  const { username } = await params;
+  const user = await getUserProfile(username);
+
+  if (!user) {
     notFound();
   }
 
-  const profile = userData.data;
-  const portfolios = portfoliosData?.data || [];
-
-  return (
-    <div>
-      <UserProfile profile={profile} />
-
-      {/* Portfolios Section */}
-      <div className="container mx-auto max-w-5xl px-6 pb-12 md:px-12 lg:px-16" id="portfolios">
-        <h2 className="mb-6 text-xl font-semibold">Portofolio</h2>
-
-        {portfoliosLoading ? (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="space-y-3 rounded-lg border p-3">
-                <Skeleton className="aspect-[4/3] w-full rounded-lg" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-              </div>
-            ))}
-          </div>
-        ) : portfolios.length === 0 ? (
-          <div className="rounded-lg border border-dashed p-12 text-center">
-            <p className="text-muted-foreground">Belum ada portofolio.</p>
-          </div>
-        ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {portfolios.map((portfolio) => (
-              <PortfolioCard
-                key={portfolio.id}
-                portfolio={portfolio}
-                showStatus={isOwner}
-                showActions={isOwner}
-                username={username}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  return <ProfileClient username={username} initialData={user} />;
 }
