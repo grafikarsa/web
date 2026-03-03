@@ -1,4 +1,16 @@
-# Grafikarsa Web Client
+# ⚠️ DEPRECATED - Grafikarsa Web Client
+
+> **🚨 WARNING: Repository ini sudah TIDAK AKTIF dan tidak dilanjutkan lagi!**
+>
+> **Project Grafikarsa telah dipindahkan ke arsitektur monorepo.**
+> 
+> **📦 Repository Baru:** https://github.com/grafikarsa/grafikarsa
+>
+> Repository polyrepo ini (backend & web terpisah) sudah deprecated dan tidak akan menerima update lagi. Semua development sekarang dilakukan di monorepo baru yang menggabungkan backend, web, dan dokumentasi dalam satu repository.
+>
+> **Jangan gunakan repository ini untuk development baru!**
+
+---
 
 Platform Katalog Portofolio & Social Network untuk Warga SMKN 4 Malang.
 
